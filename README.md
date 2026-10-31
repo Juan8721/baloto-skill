@@ -1,106 +1,114 @@
-# Laboratorio de sorteos — skill educativa
+# Baloto — Agent Skill estándar (Historial, Carrito y Seguimiento en COP)
 
-Una demostración de cómo construir una **Agent Skill compatible con Codex y Claude Code**, desde las preguntas iniciales hasta un script determinista con interfaz web y pruebas.
+Skill portable para **Google Antigravity**, **Claude Code** y **Codex** que cubre el flujo real de un jugador de Baloto en Colombia usando únicamente **Python 3.10+ estándar** (cero dependencias externas obligatorias):
 
-**Todo es simulado:** créditos sin valor monetario, sesión local de demostración, carrito ficticio y resultados sintéticos. Este proyecto independiente no está afiliado con Baloto, no accede a su web, no autentica usuarios del operador y no compra apuestas ni procesa pagos.
+1. **Historial oficial incluido (`skills/baloto/data/historial_baloto.csv`):** Registro verificado de sorteos de **Baloto y Revancha** (desde `#2360` en enero de 2024 hasta el presente, actualizable con un comando desde `baloto.com`), listo para explorar frecuencias, rezagos, $\chi^2$, pares o entrenar tus propios modelos estadísticos para escoger números.
+2. **Preparación de jugadas y carrito en `baloto.com`:** Valida combinaciones (`Solo Baloto` a $6.000 COP o `Baloto + Revancha` a $9.000 COP, tarifa editable), las organiza en boletas oficiales de hasta 5 paneles (`A`–`E`) y guía al navegador del agente (con apoyo de `carrito_helper.py`), dejando siempre el inicio de sesión y el pago en manos del usuario.
+3. **Seguimiento automático de premios reales en COP:** Tablero web local y CLI que consultan `baloto.com/resultados` y las tablas oficiales de premio por ganador por categoría para calcular aciertos línea por línea y el balance real de tus tiquetes.
 
-## Qué puedes probar
+> Proyecto independiente, sin afiliación con Operador Nacional de Juegos ni Coljuegos. Nunca almacena credenciales ni ejecuta compras o pagos por su cuenta.
 
-- Introducir tus propias combinaciones de ejemplo, incluso cientos de líneas.
-- Configurar un límite de créditos, cantidad de sorteos e intervalo entre ellos.
-- Validar números, duplicados y costo antes de preparar el carrito.
-- Dejar el carrito en borrador o confirmar la simulación.
-- Abrir una URL local de seguimiento para cada experimento.
-- Comprobar resultados sintéticos un día después de cada sorteo simulado.
-- Avanzar el reloj para probarlo en minutos y conservar el estado entre reinicios.
+---
 
-La tabla de créditos es inventada. No sirve para estimar premios ni diseñar estrategias de apuestas reales.
+## Instalación en tus agentes
 
-## Inicio rápido
-
-Requiere **Python 3.10+**, sin dependencias externas. El código utiliza la biblioteca estándar.
+Requiere **Python 3.10+**:
 
 ```sh
 git clone https://github.com/Juan8721/baloto-simulador-skill.git
 cd baloto-simulador-skill
-python3 skills/baloto-simulador/scripts/demo.py
+python3 scripts/install.py --agent all
 ```
 
-Abre **http://127.0.0.1:8765**. En Windows, puedes sustituir `python3` por `py -3`.
+También puedes instalar en un agente específico (`--agent antigravity`, `--agent claude` o `--agent codex`) o actualizar una copia previa pasando `--force`:
 
-1. Revisa los números sintéticos precargados o introduce otros ejemplos.
-2. Define los créditos y los sorteos; pulsa **Preparar carrito demo**.
-3. Guarda la URL `/seguimiento/<id>` y pulsa **Confirmar simulación**.
-4. Pulsa **Avanzar un día** dos veces para ver la primera comprobación.
+| Agente | Ruta de instalación | Cómo invocarla |
+|---|---|---|
+| **Antigravity** | `~/.gemini/config/skills/baloto/` | Pide en el chat: *«Usa la skill baloto para analizar el historial y armar mi jugada»* |
+| **Claude Code** | `~/.claude/skills/baloto/` | `/baloto` |
+| **Codex** | `~/.agents/skills/baloto/` | `Usa $baloto para verificar mis tiquetes o preparar mi carrito.` |
 
-El servidor comprueba los experimentos cada 30 segundos y actualiza el tablero. La primera fecha de sorteo es un día después de crear el carrito; sus resultados están disponibles un día después de esa fecha. Todas las fechas del tablero indican UTC.
+---
 
-El seguimiento automático funciona mientras el script está activo. Detén con `Ctrl+C`; al reiniciar con la misma carpeta, conserva el estado y procesa los sorteos vencidos. No instala un servicio de arranque ni ejecuta procesos en la nube.
+## Inicio rápido (Tablero Web y CLI)
 
-## Instalar la skill
+### 1. Abrir el tablero local de seguimiento y estadística
 
 ```sh
-python3 scripts/install.py --agent both
+python3 skills/baloto/scripts/baloto.py --port 8765
 ```
 
-También acepta `--agent codex` o `--agent claude`. Copia el paquete en las carpetas personales estándar y rechaza sobrescribir instalaciones existentes:
+Abre **http://127.0.0.1:8765** en tu navegador:
+- En **Mis tiquetes** puedes registrar combinaciones en carrito (`En preparación`) o marcar tiquetes ya comprados para verificar resultados oficiales en COP.
+- En **Historial y estadística** (`/estadisticas`) puedes explorar frecuencias, puntuaciones *z*, prueba $\chi^2$ de uniformidad y rezagos tanto para **Baloto** como para **Revancha**.
 
-| Agente | Destino | Ejemplo de invocación |
-|---|---|---|
-| Codex | `~/.agents/skills/baloto-simulador/` | `Usa $baloto-simulador para crear una prueba con mis números.` |
-| Claude Code | `~/.claude/skills/baloto-simulador/` | `/baloto-simulador` |
+### 2. Sincronizar el historial y consultar estadísticas por terminal
 
-Si el agente no la muestra, inicia una sesión nueva. El formato común usa `SKILL.md` con `name` y `description`; `agents/openai.yaml` añade metadatos opcionales para Codex. La instalación por sí sola no inicia el servidor.
+```sh
+# Traer los sorteos más recientes publicados en baloto.com hacia historial_baloto.csv
+python3 skills/baloto/scripts/baloto.py --sync-history
 
-Referencias del formato: [skills en Codex](https://learn.chatgpt.com/docs/build-skills) y [skills en Claude Code](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview#claude-code). El paquete usa herramientas locales estándar y no depende de un MCP ni del nombre de un usuario.
+# Consultar frecuencias, rezagos y χ² (baloto, revancha o both)
+python3 skills/baloto/scripts/baloto.py --stats --game baloto
+python3 skills/baloto/scripts/baloto.py --stats --game both --last 60 --json
+```
 
-## Automatizar la preparación
+### 3. Preparar boletas para el carrito de `baloto.com`
 
-Crea un JSON **fuera del repositorio**, por ejemplo:
+Crea un JSON **fuera del repositorio** (por ejemplo `/tmp/jugada.json`):
 
 ```json
 {
-  "label": "Prueba educativa",
-  "budget": 20,
+  "label": "Jugada sábado",
+  "mode": "baloto_revancha",
+  "start_draw": 2729,
   "draw_count": 3,
-  "interval_days": 1,
-  "lines": "01 02 03 04 05 | 06\n07 08 09 10 11 | 12"
+  "already_purchased": false,
+  "lines": "Combo A: 04 15 23 34 41 | 12\nCombo A: 07 11 19 28 42 | 08"
 }
 ```
 
 ```sh
-python3 skills/baloto-simulador/scripts/demo.py --prepare /ruta/prueba.json
+# Registrar jugada validada
+python3 skills/baloto/scripts/baloto.py --prepare /tmp/jugada.json --no-serve
+
+# Generar plan de boletas (paneles A–E) o asistente DOM auditable para el navegador del agente
+python3 skills/baloto/scripts/carrito_helper.py --input /tmp/jugada.json --mode plan
+python3 skills/baloto/scripts/carrito_helper.py --input /tmp/jugada.json --mode js
 ```
 
-Prepara el carrito, arranca la interfaz e imprime la URL de seguimiento. La confirmación ficticia queda en la interfaz. Cada ejecución con `--prepare` crea un experimento nuevo; para recuperar los anteriores, arranca sin esa opción.
+### 4. Verificar tiquetes activos (manual o vía `cron`)
 
-Opciones: `--port 8766`, `--data-dir /ruta/privada`, `--poll-seconds 30`. Consulta [el uso detallado](skills/baloto-simulador/references/uso.md).
+```sh
+python3 skills/baloto/scripts/baloto.py --check
+```
 
-## Cómo está construida
+---
 
-| Archivo | Qué enseña |
+## Estructura del paquete
+
+| Archivo | Propósito |
 |---|---|
-| [SKILL.md](skills/baloto-simulador/SKILL.md) | Descubrimiento, preguntas, decisiones y límites del flujo |
-| [demo.py](skills/baloto-simulador/scripts/demo.py) | Validación, persistencia, reloj y cálculo repetible |
-| [web.html](skills/baloto-simulador/scripts/web.html) | Formulario, carrito y seguimiento local |
-| [uso.md](skills/baloto-simulador/references/uso.md) | Detalles que el agente carga solo cuando hacen falta |
-| [openai.yaml](skills/baloto-simulador/agents/openai.yaml) | Nombre e invocación sugerida en Codex |
-| [tests](tests/test_demo.py) | Casos observables: fechas, duplicados, presupuesto, reinicio y errores |
+| [`skills/baloto/SKILL.md`](skills/baloto/SKILL.md) | Instrucciones principales y límites operativos para el agente |
+| [`skills/baloto/data/historial_baloto.csv`](skills/baloto/data/historial_baloto.csv) | Historial oficial de resultados de Baloto y Revancha (`YYYY-MM-DD`, balotas y Superbalotas) |
+| [`skills/baloto/scripts/baloto.py`](skills/baloto/scripts/baloto.py) | Motor de validación, sincronizador de `baloto.com`, cálculo de premios oficiales en COP, estadística y servidor HTTP |
+| [`skills/baloto/scripts/carrito_helper.py`](skills/baloto/scripts/carrito_helper.py) | Agrupador en boletas de 5 paneles (`A`–`E`) y asistente auditable para el carrito web (se detiene antes del pago) |
+| [`skills/baloto/scripts/web.html`](skills/baloto/scripts/web.html) | Tablero local con seguimiento en COP y explorador estadístico del historial |
+| [`skills/baloto/references/`](skills/baloto/references/) | Guías detalladas de [modelos estadísticos](skills/baloto/references/modelo-estadistico.md), [carrito en navegador](skills/baloto/references/carrito-navegador.md) y [seguimiento por CLI](skills/baloto/references/seguimiento-cli.md) |
+| [`scripts/install.py`](scripts/install.py) | Instalador multi-agente (`antigravity`, `claude`, `codex`, `all`) |
+| [`tests/test_baloto.py`](tests/test_baloto.py) | Suite automatizada de pruebas |
 
-La habilidad de conversar vive en las instrucciones; las cuentas y los cambios de estado viven en el script. No es necesario llamar a un modelo para cada actualización periódica.
+---
 
-## Datos y alcance
+## Privacidad y pruebas
 
-Los datos se guardan por defecto en `~/.local/share/baloto-simulador`, fuera del repositorio. No subas tus entradas ni el estado a GitHub. El servidor escucha únicamente en `127.0.0.1`; su URL funciona en el equipo que lo ejecuta. No incluye autenticación multiusuario y no debe exponerse directamente a internet.
+- Los tiquetes personales se guardan fuera del repositorio en `~/.local/share/baloto/state.json` con escritura atómica y permisos restringidos (`0700`).
+- El servidor escucha únicamente en `127.0.0.1` y protege mutaciones con validación de `Host`, `Origin`, cabeceras CSP con `nonce` y token CSRF.
 
-El motor y el instalador son Python portátil. El proceso local se prueba con la suite incluida; la detección de una skill depende de la versión y configuración de cada agente. No se incluye un adaptador para operaciones reales.
-
-## Pruebas
+Ejecutar toda la suite de pruebas (sin red ni cuentas externas):
 
 ```sh
 python3 -m unittest discover -s tests -v
 ```
-
-Usan datos sintéticos, carpetas temporales y ninguna cuenta externa. La integración continua ejecuta estas pruebas en macOS, Linux y Windows.
 
 Licencia [MIT](LICENSE).
