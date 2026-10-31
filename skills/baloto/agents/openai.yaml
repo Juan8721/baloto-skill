@@ -1,0 +1,4 @@
+interface:
+  display_name: "Baloto Colombia"
+  short_description: "Historial oficial, modelos estadísticos, carrito y seguimiento en COP"
+  default_prompt: "Usa $baloto para revisar el historial oficial de sorteos, preparar mis combinaciones y llevar el seguimiento real de mi tiquete."
