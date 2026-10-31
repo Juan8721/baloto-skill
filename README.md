@@ -15,8 +15,8 @@ Skill portable para **Google Antigravity**, **Claude Code** y **Codex** que cubr
 Requiere **Python 3.10+**:
 
 ```sh
-git clone https://github.com/Juan8721/baloto-simulador-skill.git
-cd baloto-simulador-skill
+git clone https://github.com/Juan8721/baloto-skill.git
+cd baloto-skill
 python3 scripts/install.py --agent all
 ```
 
