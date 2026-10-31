@@ -1,0 +1,4 @@
+interface:
+  display_name: "Simulador educativo de Baloto"
+  short_description: "Carrito ficticio y seguimiento de sorteos simulados"
+  default_prompt: "Usa $baloto-simulador para mostrarme cómo una skill prepara un carrito ficticio con mis números y sigue resultados simulados."
