@@ -5,8 +5,8 @@ __pycache__/
 dist/
 state.json
 .server.lock
-data/
-private/
+/data/
+/private/
 *.log
 .env
 .env.*
