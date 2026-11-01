@@ -2,9 +2,9 @@
 
 Skill portable para **Google Antigravity**, **Claude Code** y **Codex** que cubre el flujo real de un jugador de Baloto en Colombia usando únicamente **Python 3.10+ estándar** (cero dependencias externas obligatorias):
 
-1. **Historial oficial incluido (`skills/baloto/data/historial_baloto.csv`):** Registro verificado de sorteos de **Baloto y Revancha** (desde `#2360` en enero de 2024 hasta el presente, actualizable con un comando desde `baloto.com`), listo para explorar frecuencias, rezagos, $\chi^2$, pares o entrenar tus propios modelos estadísticos para escoger números.
-2. **Preparación de jugadas y carrito en `baloto.com`:** Valida combinaciones (`Solo Baloto` a $6.000 COP o `Baloto + Revancha` a $9.000 COP, tarifa editable), las organiza en boletas oficiales de hasta 5 paneles (`A`–`E`) y guía al navegador del agente (con apoyo de `carrito_helper.py`), dejando siempre el inicio de sesión y el pago en manos del usuario.
-3. **Seguimiento automático de premios reales en COP:** Tablero web local y CLI que consultan `baloto.com/resultados` y las tablas oficiales de premio por ganador por categoría para calcular aciertos línea por línea y el balance real de tus tiquetes.
+1. **Historial oficial incluido ([`skills/baloto/data/historial_baloto.csv`](skills/baloto/data/historial_baloto.csv)):** Registro íntegro y verificado de sorteos de **Baloto y Revancha** (desde `#2360` en enero de 2024 hasta el presente, actualizable con un comando desde `baloto.com`), listo para explorar frecuencias, rezagos, $\chi^2$ corregido sin reemplazo, pares o entrenar tus propios modelos estadísticos para escoger números.
+2. **Preparación de jugadas y carrito oficial (`apuestaaqui.baloto.com`):** Valida combinaciones (`Solo Baloto` a $6.000 COP o `Baloto + Revancha` a $9.000 COP, tarifa editable), las consolida en boletas oficiales de hasta 5 paneles (`A`–`E`) y guía al navegador del agente con [`carrito_helper.py`](skills/baloto/scripts/carrito_helper.py), dejando siempre el inicio de sesión y el pago en manos del usuario.
+3. **Seguimiento automático de premios reales en COP:** Tablero web local accesible (WCAG 2.1 AA) y CLI que consultan `baloto.com/resultados` y las tablas oficiales de premio por ganador por categoría (`5+SB` hasta `0 o 1 + SB`) para calcular aciertos línea por línea y el balance real de tus tiquetes una vez liquidado el escrutinio oficial.
 
 > Proyecto independiente, sin afiliación con Operador Nacional de Juegos ni Coljuegos. Nunca almacena credenciales ni ejecuta compras o pagos por su cuenta.
 
@@ -12,7 +12,7 @@ Skill portable para **Google Antigravity**, **Claude Code** y **Codex** que cubr
 
 ## Instalación en tus agentes
 
-Requiere **Python 3.10+**:
+Requiere **Python 3.10+** *(en Windows usa `python` o `py -3` si `python3` no está en `PATH`)*:
 
 ```sh
 git clone https://github.com/Juan8721/baloto-skill.git
@@ -20,7 +20,7 @@ cd baloto-skill
 python3 scripts/install.py --agent all
 ```
 
-También puedes instalar en un agente específico (`--agent antigravity`, `--agent claude` o `--agent codex`) o actualizar una copia previa pasando `--force`:
+También puedes instalar en un agente específico (`--agent antigravity`, `--agent claude` o `--agent codex`) o actualizar una copia previa pasando `--force` (conservando automáticamente cualquier sorteo nuevo sincronizado en tu historial local):
 
 | Agente | Ruta de instalación | Cómo invocarla |
 |---|---|---|
@@ -38,9 +38,9 @@ También puedes instalar en un agente específico (`--agent antigravity`, `--age
 python3 skills/baloto/scripts/baloto.py --port 8765
 ```
 
-Abre **http://127.0.0.1:8765** en tu navegador:
-- En **Mis tiquetes** puedes registrar combinaciones en carrito (`En preparación`) o marcar tiquetes ya comprados para verificar resultados oficiales en COP.
-- En **Historial y estadística** (`/estadisticas`) puedes explorar frecuencias, puntuaciones *z*, prueba $\chi^2$ de uniformidad y rezagos tanto para **Baloto** como para **Revancha**.
+Abre **http://127.0.0.1:8765** en tu navegador *(en entornos multiusuario puedes añadir `--require-token` para exigir el enlace autenticado impreso en consola)*:
+- En **Mis tiquetes** puedes registrar combinaciones en carrito con validación en vivo o marcar tiquetes ya comprados para verificar resultados oficiales en COP.
+- En **Historial y estadística** (`/estadisticas`) puedes explorar frecuencias, puntuaciones *z*, prueba $\chi^2$ corregida sin reemplazo, pares frecuentes y rezagos tanto para **Baloto** como para **Revancha**.
 
 ### 2. Sincronizar el historial y consultar estadísticas por terminal
 
@@ -53,9 +53,9 @@ python3 skills/baloto/scripts/baloto.py --stats --game baloto
 python3 skills/baloto/scripts/baloto.py --stats --game both --last 60 --json
 ```
 
-### 3. Preparar boletas para el carrito de `baloto.com`
+### 3. Preparar boletas para el carrito oficial y confirmar tras la compra
 
-Crea un JSON **fuera del repositorio** (por ejemplo `/tmp/jugada.json`):
+Puedes pasar la jugada por `stdin` (`--prepare -`) o desde un JSON externo fuera del repositorio (p. ej. `/tmp/jugada.json`):
 
 ```json
 {
@@ -69,12 +69,15 @@ Crea un JSON **fuera del repositorio** (por ejemplo `/tmp/jugada.json`):
 ```
 
 ```sh
-# Registrar jugada validada
+# Registrar jugada validada en carrito
 python3 skills/baloto/scripts/baloto.py --prepare /tmp/jugada.json --no-serve
 
-# Generar plan de boletas (paneles A–E) o asistente DOM auditable para el navegador del agente
-python3 skills/baloto/scripts/carrito_helper.py --input /tmp/jugada.json --mode plan
-python3 skills/baloto/scripts/carrito_helper.py --input /tmp/jugada.json --mode js
+# Generar plan de boletas (paneles A–E) o asistente DOM seguro (sin innerHTML) para el navegador del agente
+python3 skills/baloto/scripts/carrito_helper.py --ticket-id <ticket_id> --mode plan
+python3 skills/baloto/scripts/carrito_helper.py --ticket-id <ticket_id> --mode js
+
+# Confirmar el tiquete una vez pagado en apuestaaqui.baloto.com
+python3 skills/baloto/scripts/baloto.py --confirm <ticket_id> --start-draw 2729
 ```
 
 ### 4. Verificar tiquetes activos (manual o vía `cron`)
@@ -91,19 +94,19 @@ python3 skills/baloto/scripts/baloto.py --check
 |---|---|
 | [`skills/baloto/SKILL.md`](skills/baloto/SKILL.md) | Instrucciones principales y límites operativos para el agente |
 | [`skills/baloto/data/historial_baloto.csv`](skills/baloto/data/historial_baloto.csv) | Historial oficial de resultados de Baloto y Revancha (`YYYY-MM-DD`, balotas y Superbalotas) |
-| [`skills/baloto/scripts/baloto.py`](skills/baloto/scripts/baloto.py) | Motor de validación, sincronizador de `baloto.com`, cálculo de premios oficiales en COP, estadística y servidor HTTP |
-| [`skills/baloto/scripts/carrito_helper.py`](skills/baloto/scripts/carrito_helper.py) | Agrupador en boletas de 5 paneles (`A`–`E`) y asistente auditable para el carrito web (se detiene antes del pago) |
-| [`skills/baloto/scripts/web.html`](skills/baloto/scripts/web.html) | Tablero local con seguimiento en COP y explorador estadístico del historial |
+| [`skills/baloto/scripts/baloto.py`](skills/baloto/scripts/baloto.py) | Motor de validación, scrapers endurecidos de `baloto.com`, cálculo de premios oficiales en COP, estadística y servidor HTTP |
+| [`skills/baloto/scripts/carrito_helper.py`](skills/baloto/scripts/carrito_helper.py) | Agrupador en boletas de 5 paneles (`A`–`E`) y asistente DOM seguro para el carrito web (se detiene antes del pago) |
+| [`skills/baloto/scripts/web.html`](skills/baloto/scripts/web.html) | Tablero local accesible (WCAG 2.1 AA) con seguimiento separado de Baloto/Revancha y explorador estadístico |
 | [`skills/baloto/references/`](skills/baloto/references/) | Guías detalladas de [modelos estadísticos](skills/baloto/references/modelo-estadistico.md), [carrito en navegador](skills/baloto/references/carrito-navegador.md) y [seguimiento por CLI](skills/baloto/references/seguimiento-cli.md) |
-| [`scripts/install.py`](scripts/install.py) | Instalador multi-agente (`antigravity`, `claude`, `codex`, `all`) |
-| [`tests/test_baloto.py`](tests/test_baloto.py) | Suite automatizada de pruebas |
+| [`scripts/install.py`](scripts/install.py) | Instalador atómico multi-agente (`antigravity`, `claude`, `codex`, `all`) |
+| [`tests/test_baloto.py`](tests/test_baloto.py) | Suite automatizada de pruebas de regresión, seguridad y mutación |
 
 ---
 
 ## Privacidad y pruebas
 
-- Los tiquetes personales se guardan fuera del repositorio en `~/.local/share/baloto/state.json` con escritura atómica y permisos restringidos (`0700`).
-- El servidor escucha únicamente en `127.0.0.1` y protege mutaciones con validación de `Host`, `Origin`, cabeceras CSP con `nonce` y token CSRF.
+- Los tiquetes personales se guardan fuera del repositorio en `~/.local/share/baloto/state.json` (o `%LOCALAPPDATA%\baloto\state.json` en Windows) con escritura atómica, bloqueo transaccional (`.store.lock`) y permisos restringidos (`0700` directorio / `0600` archivo).
+- El servidor escucha únicamente en `127.0.0.1` y protege las operaciones con validación de `Host`, `Origin`, `Sec-Fetch-Site`, CSP con `nonce` aleatorio por respuesta, token CSRF independiente y modo opcional `--require-token`.
 
 Ejecutar toda la suite de pruebas (sin red ni cuentas externas):
 

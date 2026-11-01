@@ -4,7 +4,7 @@ El paquete incluye el historial verificado de sorteos de **Baloto y Revancha** e
 
 ## 1. Esquema del dataset (`data/historial_baloto.csv`)
 
-Archivo CSV UTF-8 ordenado ascendentemente por número de sorteo:
+Archivo CSV UTF-8 (finales de línea `LF`) ordenado ascendentemente por número de sorteo sin huecos ni duplicados:
 
 | Columna | Tipo | Descripción |
 |---|---|---|
@@ -23,7 +23,7 @@ Antes de correr un modelo nuevo, puedes traer automáticamente los sorteos más 
 python3 scripts/baloto.py --sync-history
 ```
 
-Si falta un tramo intermedio de sorteos, sincroniza desde un número específico:
+Si deseas refrescar o auditar un tramo específico desde `baloto.com`:
 
 ```sh
 python3 scripts/baloto.py --sync-history --from-draw 2700
@@ -39,15 +39,15 @@ python3 scripts/baloto.py --stats --game baloto
 python3 scripts/baloto.py --stats --game both --last 60 --json
 ```
 
-Métricas calculadas por `compute_stats`:
-- **Frecuencia observada vs. esperada** ($E = M \times 5/43$ en balotas y $E = M / 16$ en Superbalota) y **puntuación $z$ binomial** para cada número.
-- **Prueba $\chi^2$ de bondad de ajuste** (`gl = 42` para balotas y `gl = 15` para Superbalota) frente a una distribución uniforme.
+Métricas calculadas por `compute_stats` en [`../scripts/baloto.py`](../scripts/baloto.py):
+- **Frecuencia observada vs. esperada** ($E = M \times 5/43$ en balotas y $E = M / 16$ en Superbalota) y **puntuación $z$ hipergeométrica/binomial** para cada número.
+- **Prueba $\chi^2$ de bondad de ajuste corregida sin reemplazo:** al extraer $k=5$ balotas distintas de $N=43$ en cada sorteo, $\mathbb{E}[\sum_{i=1}^{43} (C_i - E)^2 / E] = N - k = 38$, por lo que se aplica el factor exacto $\frac{N-1}{N-k} = \frac{42}{38}$ para comparar contra $\chi^2_{42}$ (umbral $p=0{,}05$: `58,12`), junto con $\chi^2_{15}$ en Superbalota (umbral $p=0{,}05$: `25,00`).
 - **Rezago (`draws_since_seen`):** cuántos sorteos consecutivos lleva cada balota o Superbalota sin salir (`0` = salió en el último sorteo).
 - **Pares más frecuentes (`top_pairs`)** y **estadísticos de la suma** (`min`, `max`, `mean`, `median`) de las 5 balotas.
 
 ## 3. Guía para construir modelos propios en Python
 
-El agente puede leer `data/historial_baloto.csv` directamente con el módulo estándar `csv` (o `pandas` si el entorno del usuario lo tiene) para implementar el enfoque que pida el usuario:
+El agente puede leer [`../data/historial_baloto.csv`](../data/historial_baloto.csv) directamente con el módulo estándar `csv` (o `pandas` si el entorno del usuario lo tiene) para implementar el enfoque que pida el usuario:
 
 1. **Muestreo ponderado por frecuencia o rezago:** asignar pesos suaves a números según ventana reciente o sorteos sin aparecer.
 2. **Filtros estructurales de suma y paridad:** restringir combinaciones cuya suma de 5 balotas caiga cerca del rango intercuartílico histórico (~90–130) o equilibrar pares/impares (2–3 o 3–2) y decenas.

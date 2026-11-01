@@ -1,8 +1,10 @@
 # Uso por CLI, API Local y Automatización del Seguimiento
 
-## 1. Registrar una jugada desde un archivo JSON
+*(En Windows, reemplaza `python3` por `python` o `py -3` si el alias `python3` no está configurado).*
 
-Guarda un JSON **fuera del repositorio** (por ejemplo en `/tmp/mi_jugada.json`):
+## 1. Registrar una jugada por `stdin` o desde un archivo JSON
+
+Puedes enviar el JSON directamente por `stdin` (`--prepare -`) para no dejar archivos con tus jugadas en el directorio de trabajo, o leerlo desde una ruta fuera del repositorio (`/tmp/mi_jugada.json`):
 
 ```json
 {
@@ -20,33 +22,41 @@ Guarda un JSON **fuera del repositorio** (por ejemplo en `/tmp/mi_jugada.json`):
 - `start_draw` *(opcional)*: sorteo inicial; si se omite, toma `último_sorteo_del_historial + 1`.
 - `already_purchased`: `false` deja el registro en estado `cart` (sin contabilizar gasto); `true` lo activa de inmediato (`active`) para evaluar sorteos oficiales.
 
-Registrar e imprimir el JSON resultante sin abrir servidor:
+Registrar por `stdin` e imprimir el JSON resultante sin abrir servidor:
 
 ```sh
-python3 scripts/baloto.py --prepare /tmp/mi_jugada.json --no-serve
+python3 scripts/baloto.py --prepare - --no-serve < /tmp/mi_jugada.json
 ```
 
-Registrar y abrir el tablero web local de inmediato:
+Confirmar desde CLI un tiquete en carrito una vez comprado:
 
 ```sh
-python3 scripts/baloto.py --prepare /tmp/mi_jugada.json --port 8765
+python3 scripts/baloto.py --confirm <ticket_id> --start-draw 2729
+```
+
+Abrir el tablero web local (añade `--require-token` en equipos multiusuario para exigir sesión autenticada por cookie `HttpOnly`):
+
+```sh
+python3 scripts/baloto.py --port 8765
 ```
 
 ## 2. Verificación oficial de resultados y premios
 
 Cuando se ejecuta `python3 scripts/baloto.py --check` (o se pulsa **«Sincronizar baloto.com»** en el tablero web):
 
-1. Consulta `https://baloto.com/resultados` para identificar el último sorteo publicado y actualizar `data/historial_baloto.csv` si hay sorteos nuevos.
+1. Consulta `https://baloto.com/resultados` (restringiendo redirecciones únicamente a `baloto.com` / `www.baloto.com` sobre HTTPS y un máximo de 2 MB) para identificar el último sorteo publicado y actualizar `data/historial_baloto.csv` si hay sorteos nuevos.
 2. Para cada tiquete en estado `active` cuyos sorteos `#s` ya se hayan jugado (`s <= último_sorteo`):
-   - Descarga `https://baloto.com/resultados-baloto/<s>` (y `https://baloto.com/resultados-revancha/<s>` cuando la modalidad incluye Revancha).
+   - Descarga `https://baloto.com/resultados-baloto/<s>` (y `https://baloto.com/resultados-revancha/<s>` cuando la modalidad incluye Revancha) fuera del candado de lectura del estado.
+   - Verifica que el escrutinio oficial ya esté liquidado (categoría de reembolso fijo `0 o 1 + SB` > `$0`). Si recién terminó la transmisión y la tabla aún aparece en `$0`, el sorteo permanece pendiente hasta la siguiente consulta.
    - Extrae las 6 balotas ganadoras y las **8 categorías oficiales de premio por ganador** en COP (`5+SB`, `5`, `4+SB`, `4`, `3+SB`, `3`, `2+SB`, `0 o 1 + SB`).
-   - Guarda la tabla oficial en caché dentro de `state.json` y evalúa cada línea una sola vez (operación idempotente).
-   - Cuando todos los sorteos del tiquete tienen resultado oficial, el estado pasa automáticamente a `complete`.
+   - Guarda la tabla oficial en caché dentro de `state.json` y evalúa cada línea de forma idempotente.
+   - Cuando todos los sorteos del tiquete tienen resultado oficial liquidado, el estado pasa automáticamente a `complete`.
 
-## 3. Persistencia, bloqueo y privacidad
+## 3. Persistencia, bloqueo transaccional y privacidad
 
-- Por defecto, tus tiquetes se guardan en `~/.local/share/baloto/state.json` mediante escritura atómica (`tempfile` + `fsync` + `os.replace`).
-- El archivo `.server.lock` evita que dos instancias escriban a la vez en el mismo `--data-dir`. Si un cierre abrupto del sistema deja `.server.lock`, comprueba que el PID dentro del archivo ya no exista antes de borrar `.server.lock` (nunca borres `state.json`).
+- Por defecto, tus tiquetes se guardan fuera del repositorio en `~/.local/share/baloto/state.json` (o `%LOCALAPPDATA%\baloto\state.json` en instalaciones nuevas de Windows, personalizable con `BALOTO_DATA_DIR` o `--data-dir`) con permisos `0700` en el directorio y `0600` en `state.json`.
+- Las escrituras concurrentes entre el servidor web y comandos puntuales (`--prepare --no-serve`, `--confirm`, `--check`) se coordinan mediante bloqueo de archivo del sistema operativo (`.store.lock` con `fcntl`/`msvcrt`) y recarga automática si `state.json` cambió en disco.
+- El bloqueo `.server.lock` impide levantar dos servidores HTTP simultáneos sobre el mismo `--data-dir` y se libera automáticamente por el sistema operativo incluso tras un cierre inesperado del proceso.
 
 ## 4. Automatización opcional con `cron` (solo si el usuario lo solicita)
 

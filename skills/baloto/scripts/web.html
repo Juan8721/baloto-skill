@@ -4,159 +4,314 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Baloto · Seguimiento Oficial e Historial Estadístico</title>
 <style>
-:root{color-scheme:light;--ink:#152232;--muted:#556677;--paper:#f6f5f0;--card:#ffffff;--line:#dde0da;--accent:#125b46;--accent-soft:#e6f2ec;--gold:#f4c95d;--red:#b42318;--red-soft:#fef3f2;--green:#166534;--green-soft:#dcfce7;--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
-*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 system-ui,-apple-system,sans-serif}
+:root{color-scheme:light;--ink:#152232;--muted:#4c5d6e;--paper:#f6f5f0;--card:#ffffff;--line:#d5dad3;--border-input:#6b7a86;--focus-ring:#125b46;--accent:#125b46;--accent-soft:#e6f2ec;--gold:#f4c95d;--red:#b42318;--red-soft:#fef3f2;--green:#166534;--green-soft:#dcfce7;--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 system-ui,-apple-system,sans-serif}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.skip-link{position:absolute;left:12px;top:-60px;z-index:1000;background:var(--ink);color:#fff;padding:10px 14px;border-radius:8px;font-weight:700;text-decoration:none}
+.skip-link:focus-visible{top:12px}
 header{border-bottom:1px solid var(--line);background:#fff;padding:16px max(24px,calc((100vw - 1140px)/2));display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-nav{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-a{color:var(--accent);text-underline-offset:4px}.brand{color:var(--ink);text-decoration:none;font-weight:800;font-size:17px;letter-spacing:-.4px}
-.navlink{text-decoration:none;color:var(--muted);font-weight:650;font-size:14px;padding:6px 10px;border-radius:8px}.navlink.active,.navlink:hover{color:var(--accent);background:var(--accent-soft)}
-main{max-width:1140px;margin:34px auto;padding:0 24px}
-h1{font-size:clamp(26px,4vw,40px);line-height:1.12;letter-spacing:-1.2px;margin:8px 0 12px}
-h2{font-size:20px;letter-spacing:-.4px;margin:0 0 14px}h3{margin:0 0 10px;font-size:16px}p{margin:6px 0 14px}
-.muted{color:var(--muted)}.eyebrow{font-size:11px;font-weight:750;letter-spacing:1.8px;text-transform:uppercase;color:var(--accent)}
+nav{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+a{color:var(--accent);text-underline-offset:4px}
+.brand{color:var(--ink);text-decoration:none;font-weight:800;font-size:17px;letter-spacing:-.4px;padding:4px 6px;border-radius:8px}
+.navlink{text-decoration:none;color:var(--muted);font-weight:650;font-size:14px;padding:7px 11px;border-radius:8px}
+.navlink.active,.navlink:hover{color:var(--accent);background:var(--accent-soft)}
+.header-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+main{max-width:1140px;margin:32px auto;padding:0 24px}
+main:focus{outline:none}
+#app{min-height:65vh}
+h1{font-size:clamp(25px,4vw,38px);line-height:1.14;letter-spacing:-1.1px;margin:8px 0 12px}
+h2{font-size:20px;letter-spacing:-.4px;margin:0 0 14px}
+h3{margin:0 0 10px;font-size:16px}
+p{margin:6px 0 14px}
+code{font-family:var(--mono);font-size:.92em;background:#eef1ec;padding:1px 5px;border-radius:5px}
+.dark code{background:#24384d;color:#e6f2ec}
+.muted{color:var(--muted)}
+.eyebrow{font-size:11px;font-weight:750;letter-spacing:1.8px;text-transform:uppercase;color:var(--accent)}
 .grid{display:grid;grid-template-columns:1.18fr .82fr;gap:24px;align-items:start}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;margin-bottom:20px}
-.dark{background:var(--ink);color:#fff;border-color:var(--ink)}.dark .muted{color:#bfd0df}
+.dark{background:var(--ink);color:#fff;border-color:var(--ink)}
+.dark .muted{color:#c9d8e6}
+.dark a{color:#9ef0c8}
 label{display:block;font-size:13px;font-weight:650;margin:0 0 5px}
-input:not([type=checkbox]),select,textarea{width:100%;border:1px solid #b5c0c4;border-radius:8px;padding:10px 11px;font:inherit;background:#fafbf9;color:var(--ink)}
-input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{outline:3px solid #84b89f;outline-offset:2px}
+.label-row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px}
+.label-row label{margin:0}
+input:not([type=checkbox]),select,textarea{width:100%;border:1px solid var(--border-input);border-radius:8px;padding:10px 11px;font:inherit;background:#fafbf9;color:var(--ink)}
+:is(input,select,textarea,button,a,summary):focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
+.dark :is(a,button):focus-visible{outline-color:#9ef0c8}
 textarea{min-height:135px;font-family:var(--mono);font-size:14px;resize:vertical}
-.field{margin-bottom:16px}.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-.help{font-size:12px;color:var(--muted);margin-top:5px}
-.checkline{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:600;margin:12px 0 16px;cursor:pointer}
-.checkline input{width:17px;height:17px;accent-color:var(--accent)}
-button{border:0;border-radius:9px;background:var(--accent);color:#fff;padding:10px 16px;font:650 14px/1.35 system-ui;cursor:pointer}
-button:hover{filter:brightness(1.08)}button:disabled{opacity:.6;cursor:wait}
-.secondary{background:#e7ede9;color:#163d30}.danger{background:var(--red-soft);color:var(--red);border:1px solid #f5c2c0}
+.field{margin-bottom:16px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.help{font-size:12.5px;color:var(--muted);margin-top:5px}
+.field-warn{font-size:12.5px;color:var(--red);font-weight:600;margin-top:6px}
+.checkline{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;margin:12px 0 16px;cursor:pointer}
+.checkline input{width:18px;height:18px;accent-color:var(--accent);flex-shrink:0}
+button{border:1px solid transparent;border-radius:9px;background:var(--accent);color:#fff;padding:10px 16px;font:650 14px/1.35 system-ui;cursor:pointer}
+button:hover{filter:brightness(1.07)}
+button:disabled{opacity:.6;cursor:wait}
+.secondary{background:#e7ede9;color:#14382c;border-color:#b8c7be}
+.danger{background:var(--red-soft);color:var(--red);border-color:#e5a39f}
 .smallbtn{padding:7px 12px;font-size:13px}
-.buttons{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.wide{width:100%}
+.buttons{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.wide{width:100%}
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:20px 0}
 .metric{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px}
 .metric span{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
-.metric strong{font-size:25px;letter-spacing:-.8px;font-variant-numeric:tabular-nums}
+.metric strong{font-size:24px;letter-spacing:-.7px;font-variant-numeric:tabular-nums}
 .pos{color:var(--green)}.neg{color:var(--red)}
 .pill{display:inline-flex;align-items:center;border-radius:999px;font-size:12px;font-weight:700;padding:4px 10px;background:#ecefe9;color:var(--ink)}
-.pill.active,.pill.win{background:var(--green-soft);color:var(--green)}.pill.cart{background:#fef6d8;color:#7c5800}.pill.loss{background:var(--red-soft);color:var(--red)}
-.preview{padding:12px 14px;border-radius:10px;background:var(--accent-soft);font-size:13px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
-table{border-collapse:collapse;width:100%;font-size:13.5px}th{text-align:left;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;font-weight:700}
-th,td{padding:11px 9px;border-bottom:1px solid var(--line);vertical-align:middle}th:first-child,td:first-child{padding-left:0}.tablewrap{overflow-x:auto}
+.pill.active,.pill.win{background:var(--green-soft);color:var(--green)}
+.pill.cart{background:#fef6d8;color:#735000}
+.pill.loss{background:var(--red-soft);color:var(--red)}
+.preview{padding:12px 14px;border-radius:10px;background:var(--accent-soft);border:1px solid #bdd9cb;font-size:13.5px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{text-align:left;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;font-weight:700}
+th,td{padding:11px 9px;border-bottom:1px solid var(--line);vertical-align:middle}
+th:first-child,td:first-child{padding-left:0}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .balls{display:inline-flex;gap:5px;align-items:center;flex-wrap:wrap;font-family:var(--mono);font-size:12.5px;font-weight:700}
-.ball{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 5px;border-radius:999px;background:#f0f2ed;border:1px solid #d4d8d0}
-.ball.sb{background:#fff3cd;border-color:#e5c05b;color:#664600}
-.ball.hit{background:var(--green-soft);border-color:#4ade80;color:var(--green)}
-.ball.sbhit{background:var(--gold);border-color:#c9971c;color:#3d2b00}
-.list{list-style:none;padding:0;margin:0}.list li{padding:12px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:center}.list li:last-child{border:0}
-.error{border:1px solid #d97770;background:var(--red-soft);color:var(--red);padding:12px 16px;border-radius:10px;margin-bottom:18px}
-.notice{border:1px solid #9bd1b8;background:var(--accent-soft);color:#0f4736;padding:12px 16px;border-radius:10px;margin-bottom:18px}
-details{margin-top:12px}summary{cursor:pointer;font-weight:650;font-size:13.5px}
-footer{max-width:1140px;margin:40px auto;padding:20px 24px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
-@media(max-width:800px){.grid,.row,.row3{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}}
+.ball{display:inline-flex;align-items:center;justify-content:center;gap:2px;min-width:28px;height:27px;padding:0 6px;border-radius:999px;background:#f0f2ed;border:1px solid #b8c0b8;color:var(--ink)}
+.ball.sb{background:#fff3cd;border-color:#c79c2e;color:#593d00}
+.ball.hit{background:var(--green-soft);border:2px solid #15803d;color:var(--green);font-weight:800}
+.ball.sbhit{background:var(--gold);border:2px solid #8a6100;color:#2e2000;font-weight:800}
+.slip-card{border:1px solid var(--line);border-radius:12px;padding:14px}
+.slip-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.slip-rows{margin-top:8px;display:grid;gap:6px}
+.slip-row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.confirm-box{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;background:#f4f6f2;border:1px solid var(--line);padding:6px 10px;border-radius:10px}
+.confirm-box label{margin:0;font-size:12.5px}
+.confirm-box input{width:104px;padding:6px 8px}
+.list{list-style:none;padding:0;margin:0}
+.list li{padding:12px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.list li:last-child{border:0}
+.error{border:1px solid #c95b53;background:var(--red-soft);color:var(--red);padding:12px 16px;border-radius:10px;margin-bottom:18px;font-weight:600}
+.notice{border:1px solid #75b798;background:var(--accent-soft);color:#0f4736;padding:12px 16px;border-radius:10px;margin-bottom:18px;font-weight:600}
+details{margin-top:12px}
+summary{cursor:pointer;font-weight:650;font-size:13.5px;padding:4px 0}
+footer{max-width:1140px;margin:40px auto;padding:20px 24px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+@media(pointer:coarse){
+  button,.smallbtn,.navlink{min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+  .checkline{min-height:44px}
+  summary{min-height:44px;display:flex;align-items:center}
+}
+@media(max-width:820px){.grid,.row,.row3{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.cards{grid-template-columns:1fr}header,main,footer{padding-left:16px;padding-right:16px}.panel{padding:18px}}
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main-content">Saltar al contenido principal</a>
 <header>
-  <nav>
-    <a class="brand" href="/">◌ Baloto</a>
+  <nav aria-label="Principal">
+    <a class="brand" href="/"><span aria-hidden="true">◌</span> Baloto</a>
     <a class="navlink" id="nav-home" href="/">Mis tiquetes</a>
     <a class="navlink" id="nav-stats" href="/estadisticas">Historial y estadística</a>
   </nav>
-  <div style="display:flex;align-items:center;gap:10px">
-    <span id="sync-meta" class="muted" style="font-size:12px"></span>
-    <button id="sync-btn" class="secondary smallbtn" type="button">↻ Sincronizar baloto.com</button>
+  <div class="header-actions">
+    <span id="sync-meta" class="muted" style="font-size:12.5px"></span>
+    <button id="sync-btn" class="secondary smallbtn" type="button"><span aria-hidden="true">↻</span> Sincronizar baloto.com</button>
   </div>
 </header>
-<main>
+<main id="main-content" tabindex="-1">
   <div id="flash" hidden></div>
   <div id="app"><p class="muted">Cargando…</p></div>
 </main>
 <footer>Herramienta independiente para análisis histórico, preparación de jugadas y verificación oficial contra baloto.com. Tus tiquetes se guardan localmente en tu equipo. El juego es entretenimiento (Coljuegos: 01 8000 180 606).</footer>
-<script nonce="__TOKEN__">
-const TOKEN='__TOKEN__';
+<script nonce="__CSP_NONCE__">
+const TOKEN='__CSRF_TOKEN__';
+const SAMPLE_LINES='Combo A: 04 15 23 34 41 | 12\nCombo A: 07 11 19 28 42 | 08';
 const app=document.querySelector('#app'),flash=document.querySelector('#flash'),syncBtn=document.querySelector('#sync-btn'),syncMeta=document.querySelector('#sync-meta');
+let renderSeq=0;
+let cachedHealth=null;
+
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const cop=v=>{const n=Number(v||0);return (n<0?'−':'')+'$'+Math.abs(n).toLocaleString('es-CO');};
+const cop=v=>{
+  const n=Number(v||0);
+  const formatted=Math.round(Math.abs(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  return (n<0?'−':'')+'$'+formatted;
+};
+const dec=(v,digits=2)=>Number(v||0).toLocaleString('es-CO',{minimumFractionDigits:digits,maximumFractionDigits:digits});
 const pad=v=>String(v).padStart(2,'0');
 const statusLabel=s=>({cart:'En carrito (sin comprar)',active:'Activo',complete:'Finalizado'}[s]||s);
 const modeLabel=m=>m==='baloto'?'Solo Baloto':'Baloto + Revancha';
 
-function notify(msg,kind='error'){flash.hidden=false;flash.className=kind==='ok'?'notice':'error';flash.textContent=msg;}
-async function api(path,body){
-  const opts=body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':TOKEN},body:JSON.stringify(body)};
-  const r=await fetch(path,opts);const j=await r.json();
-  if(!r.ok)throw Error(j.error||'No se pudo completar la operación.');
+function notify(msg,kind='error'){
+  flash.hidden=false;
+  if(kind==='ok'){
+    flash.className='notice';
+    flash.setAttribute('role','status');
+    flash.setAttribute('aria-live','polite');
+  }else{
+    flash.className='error';
+    flash.setAttribute('role','alert');
+    flash.removeAttribute('aria-live');
+  }
+  flash.textContent=msg;
+  if(typeof flash.scrollIntoView==='function')flash.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+async function api(path,body,method){
+  const opts=body===undefined&&!method?{}:{
+    method:method||'POST',
+    headers:{'X-CSRF-Token':TOKEN,...(body!==undefined?{'Content-Type':'application/json'}:{})},
+    ...(body!==undefined?{body:JSON.stringify(body)}:{}),
+  };
+  const r=await fetch(path,opts);
+  const j=await r.json();
+  if(!r.ok){
+    const err=new Error(j.error||'No se pudo completar la operación.');
+    err.status=r.status;
+    throw err;
+  }
   return j;
 }
+
 function renderBalls(nums,sb,winNums=null,winSb=null){
   const winSet=winNums?new Set(winNums):null;
-  const main=nums.map(n=>`<span class="ball${winSet&&winSet.has(n)?' hit':''}">${pad(n)}</span>`).join('');
-  const sbCls=winSb!==null&&winSb===sb?'ball sbhit':'ball sb';
-  return `<span class="balls">${main}<span class="${sbCls}">★ ${pad(sb)}</span></span>`;
+  const main=nums.map(n=>{
+    const hit=Boolean(winSet&&winSet.has(n));
+    return `<span class="ball${hit?' hit':''}">${hit?'<span aria-hidden="true">✓</span>':''}${pad(n)}${hit?'<span class="sr-only"> (acierto)</span>':''}</span>`;
+  }).join(' ');
+  const isSbHit=winSb!==null&&winSb===sb;
+  const sbCls=isSbHit?'ball sbhit':'ball sb';
+  return `<span class="balls">${main} <span class="${sbCls}"><span aria-hidden="true">${isSbHit?'✓★':'★'}</span><span class="sr-only">Superbalota </span>${pad(sb)}${isSbHit?'<span class="sr-only"> (acierto)</span>':''}</span></span>`;
 }
-function groupSlips(lines){
-  const buckets=[];
-  for(const l of lines){
-    const c=l.combo||null;
-    if(buckets.length&&buckets[buckets.length-1].combo===c&&buckets[buckets.length-1].items.length<5)buckets[buckets.length-1].items.push(l);
-    else buckets.push({combo:c,items:[l]});
+
+function validateLinesClient(raw){
+  const seen=new Set();
+  let validCount=0;
+  let firstIssue='';
+  const rows=String(raw||'').split(/\r?\n/);
+  for(let i=0;i<rows.length;i++){
+    let clean=rows[i].trim();
+    if(!clean||clean.startsWith('#'))continue;
+    if(clean.includes(':')){
+      const idx=clean.indexOf(':');
+      const combo=clean.slice(0,idx).trim();
+      clean=clean.slice(idx+1).trim();
+      if(!combo||combo.length>24||!/^[\p{L}\p{N}_\s.#-]+$/u.test(combo)){
+        if(!firstIssue)firstIssue=`Línea ${i+1}: etiqueta de combo inválida (máx. 24 caracteres alfanuméricos).`;
+        continue;
+      }
+    }
+    const parts=clean.split('|');
+    if(parts.length!==2){
+      if(!firstIssue)firstIssue=`Línea ${i+1}: separa los 5 números y la Superbalota con "|" (ej. 04 15 23 34 41 | 12).`;
+      continue;
+    }
+    const pieces=parts[0].trim().split(/[\s,\-]+/).filter(Boolean);
+    if(pieces.length!==5||!pieces.every(p=>/^\d{1,2}$/.test(p))){
+      if(!firstIssue)firstIssue=`Línea ${i+1}: escribe exactamente 5 números entre 1 y 43.`;
+      continue;
+    }
+    const nums=pieces.map(Number).sort((a,b)=>a-b);
+    if(new Set(nums).size!==5||nums.some(n=>n<1||n>43)){
+      if(!firstIssue)firstIssue=`Línea ${i+1}: los 5 números deben ser distintos y estar entre 1 y 43.`;
+      continue;
+    }
+    const sbRaw=parts[1].trim();
+    if(!/^\d{1,2}$/.test(sbRaw)||Number(sbRaw)<1||Number(sbRaw)>16){
+      if(!firstIssue)firstIssue=`Línea ${i+1}: la Superbalota debe estar entre 1 y 16.`;
+      continue;
+    }
+    const key=nums.join(',')+'|'+Number(sbRaw);
+    if(seen.has(key)){
+      if(!firstIssue)firstIssue=`Línea ${i+1}: combinación duplicada dentro del mismo tiquete.`;
+      continue;
+    }
+    seen.add(key);
+    validCount++;
   }
-  return buckets;
+  return {validCount,firstIssue};
 }
-function navigate(url){history.pushState({},'',url);render().catch(e=>notify(e.message));}
+
+function captureHomeDraft(){
+  const form=document.querySelector('#ticket-form');
+  if(!form)return null;
+  return {
+    label:document.querySelector('#label')?.value??'',
+    mode:document.querySelector('#mode')?.value??'baloto_revancha',
+    price_per_line:document.querySelector('#price_per_line')?.value??'9000',
+    start_draw:document.querySelector('#start_draw')?.value??'',
+    draw_count:document.querySelector('#draw_count')?.value??'1',
+    lines:document.querySelector('#lines')?.value??'',
+    already_purchased:Boolean(document.querySelector('#already_purchased')?.checked),
+  };
+}
+
+function navigate(url){
+  history.pushState({},'',url);
+  render().catch(e=>notify(e.message));
+}
 
 async function refreshHeader(){
   const h=await api('/api/health');
+  cachedHealth=h;
   syncMeta.textContent=h.latest_sorteo?`Historial: ${h.history_draws} sorteos (último #${h.latest_sorteo})`:'';
   return h;
 }
 
-async function viewHome(){
+async function viewHome(seq,draft=null){
   const [health,tickets]=await Promise.all([refreshHeader(),api('/api/tickets')]);
+  if(seq!==renderSeq)return;
+  const initLabel=draft&&draft.lines.trim()?draft.label:`Jugada sorteo #${health.next_sorteo}`;
+  const initMode=draft?draft.mode:'baloto_revancha';
+  const initPrice=draft?draft.price_per_line:(initMode==='baloto'?'6000':'9000');
+  const initStart=draft&&draft.lines.trim()?draft.start_draw:String(health.next_sorteo);
+  const initDraws=draft?draft.draw_count:'1';
+  const initLines=draft?draft.lines:'';
+  const initPurchased=Boolean(draft&&draft.already_purchased);
+
   app.innerHTML=`
   <div style="margin-bottom:22px">
     <div class="eyebrow">Flujo estándar · Pesos colombianos reales</div>
     <h1>Prepara tu jugada y sigue tus premios oficiales.</h1>
-    <p class="muted">Registra tus líneas para cargarlas en el carrito de <strong>baloto.com</strong> o haz seguimiento automático de tiquetes ya comprados contra los resultados y tablas de premios oficiales.</p>
+    <p class="muted">Registra tus líneas para cargarlas en el carrito oficial (<code>apuestaaqui.baloto.com</code>) o haz seguimiento automático de tiquetes ya comprados contra los resultados y tablas de premios de <strong>baloto.com</strong>.</p>
   </div>
   <div class="grid">
     <section class="panel">
       <h2>Nueva jugada o tiquete</h2>
-      <form id="ticket-form">
+      <form id="ticket-form" novalidate>
         <div class="field">
           <label for="label">Nombre identificativo</label>
-          <input id="label" name="label" value="Jugada sorteo #${health.next_sorteo}" maxlength="80" required>
+          <input id="label" name="label" value="${esc(initLabel)}" maxlength="80" required>
         </div>
         <div class="row">
           <div class="field">
             <label for="mode">Modalidad</label>
             <select id="mode" name="mode">
-              <option value="baloto_revancha">Baloto + Revancha ($9.000)</option>
-              <option value="baloto">Solo Baloto ($6.000)</option>
+              <option value="baloto_revancha" ${initMode==='baloto_revancha'?'selected':''}>Baloto + Revancha ($9.000)</option>
+              <option value="baloto" ${initMode==='baloto'?'selected':''}>Solo Baloto ($6.000)</option>
             </select>
           </div>
           <div class="field">
             <label for="price_per_line">Valor por línea y sorteo (COP)</label>
-            <input id="price_per_line" name="price_per_line" type="number" min="1000" max="1000000" step="100" value="9000" required>
+            <input id="price_per_line" name="price_per_line" type="number" min="1000" max="1000000" step="100" value="${esc(initPrice)}" required>
           </div>
         </div>
         <div class="row">
           <div class="field">
             <label for="start_draw">Sorteo inicial (#)</label>
-            <input id="start_draw" name="start_draw" type="number" min="1" max="999999" value="${health.next_sorteo}" required>
+            <input id="start_draw" name="start_draw" type="number" min="1" max="999999" value="${esc(initStart)}" required>
           </div>
           <div class="field">
             <label for="draw_count">Sorteos consecutivos</label>
-            <input id="draw_count" name="draw_count" type="number" min="1" max="52" value="1" required>
+            <input id="draw_count" name="draw_count" type="number" min="1" max="52" value="${esc(initDraws)}" required>
           </div>
         </div>
         <div class="field">
-          <label for="lines">Combinaciones (5 números del 1–43 | Superbalota 1–16)</label>
-          <textarea id="lines" name="lines" required spellcheck="false" placeholder="Combo A: 04 15 23 34 41 | 12&#10;Combo A: 07 11 19 28 42 | 08">04 15 23 34 41 | 12
-07 11 19 28 42 | 08</textarea>
-          <div class="help">Una línea por renglón. Puedes anteponer una etiqueta opcional como <code>Combo A:</code>. ¿Buscas ideas? Revisa <a href="/estadisticas">el historial estadístico</a>.</div>
+          <div class="label-row">
+            <label for="lines">Combinaciones (5 números del 1–43 | Superbalota 1–16)</label>
+            <button type="button" id="btn-fill-sample" class="secondary smallbtn">Insertar ejemplo</button>
+          </div>
+          <textarea id="lines" name="lines" required spellcheck="false" aria-describedby="lines-help lines-validation" placeholder="Combo A: 04 15 23 34 41 | 12&#10;Combo A: 07 11 19 28 42 | 08">${esc(initLines)}</textarea>
+          <div id="lines-validation" class="field-warn" hidden></div>
+          <div id="lines-help" class="help">Una línea por renglón. Puedes anteponer una etiqueta opcional como <code>Combo A:</code> para agrupar boletas A–E. Explora ideas en <a href="/estadisticas">Historial y estadística</a>.</div>
         </div>
-        <div id="cost-preview" class="preview"></div>
-        <label class="checkline"><input id="already_purchased" name="already_purchased" type="checkbox"> Ya compré este tiquete (activar verificación oficial de inmediato)</label>
-        <button class="wide" type="submit">Guardar jugada →</button>
+        <div id="cost-preview" class="preview" role="status" aria-live="polite" aria-atomic="true"></div>
+        <label class="checkline"><input id="already_purchased" name="already_purchased" type="checkbox" ${initPurchased?'checked':''}> Ya compré este tiquete (activar verificación oficial de inmediato)</label>
+        <button class="wide" type="submit">Guardar jugada <span aria-hidden="true">→</span></button>
       </form>
     </section>
     <aside>
@@ -175,27 +330,53 @@ async function viewHome(){
           </li>`).join('')}</ul>`:'<p class="muted">Aún no tienes tiquetes registrados.</p>'}
       </section>
       <section class="panel dark">
-        <h3>Flujo completo con tu agente</h3>
-        <p class="muted">1. Consulta frecuencias, rezagos y χ² en <a href="/estadisticas" style="color:#9ef0c8">Estadística</a> o modela sobre <code>data/historial_baloto.csv</code>.</p>
-        <p class="muted">2. Guarda tus líneas en carrito y pídele al agente que las cargue en <code>baloto.com</code> (tú inicias sesión y pagas).</p>
-        <p class="muted" style="margin-bottom:0">3. Confirma tu tiquete y sincroniza tras cada sorteo (lunes, miércoles y sábado) para calcular premios oficiales exactos.</p>
+        <h2>Flujo completo con tu agente</h2>
+        <p class="muted">1. Consulta frecuencias, rezagos y χ² en <a href="/estadisticas">Estadística</a> o modela sobre <code>historial_baloto.csv</code>.</p>
+        <p class="muted">2. Guarda tus líneas en carrito y pídele al agente que las cargue en <code>apuestaaqui.baloto.com</code> (tú inicias sesión y pagas).</p>
+        <p class="muted" style="margin-bottom:0">3. Confirma tu tiquete y sincroniza tras cada sorteo (lunes, miércoles y sábado) para liquidar premios oficiales exactos.</p>
       </section>
     </aside>
   </div>`;
 
-  const modeEl=document.querySelector('#mode'),priceEl=document.querySelector('#price_per_line'),drawsEl=document.querySelector('#draw_count'),linesEl=document.querySelector('#lines'),prevEl=document.querySelector('#cost-preview');
+  const modeEl=document.querySelector('#mode'),priceEl=document.querySelector('#price_per_line'),drawsEl=document.querySelector('#draw_count'),linesEl=document.querySelector('#lines'),prevEl=document.querySelector('#cost-preview'),warnEl=document.querySelector('#lines-validation');
   modeEl.onchange=()=>{priceEl.value=modeEl.value==='baloto'?6000:9000;updatePreview();};
   function updatePreview(){
-    const countLines=linesEl.value.split('\n').filter(l=>l.trim()&&!l.trim().startsWith('#')).length;
+    const {validCount,firstIssue}=validateLinesClient(linesEl.value);
+    if(firstIssue){
+      warnEl.hidden=false;
+      warnEl.textContent=firstIssue;
+    }else{
+      warnEl.hidden=true;
+      warnEl.textContent='';
+    }
     const d=Math.max(1,Number(drawsEl.value||1)),p=Math.max(0,Number(priceEl.value||0));
-    prevEl.innerHTML=`<span><strong>${countLines}</strong> línea(s) × <strong>${d}</strong> sorteo(s)</span><strong>Total estimado: ${cop(countLines*d*p)} COP</strong>`;
+    prevEl.innerHTML=`<span><strong>${validCount}</strong> línea(s) válida(s) × <strong>${d}</strong> sorteo(s)</span><strong>Total estimado: ${cop(validCount*d*p)} COP</strong>`;
   }
+  document.querySelector('#btn-fill-sample').onclick=()=>{
+    if(!linesEl.value.trim())linesEl.value=SAMPLE_LINES;
+    else linesEl.value=linesEl.value.replace(/\s*$/,'\n')+SAMPLE_LINES;
+    linesEl.focus();
+    updatePreview();
+  };
   [priceEl,drawsEl,linesEl].forEach(el=>el.addEventListener('input',updatePreview));
   updatePreview();
 
   document.querySelector('#ticket-form').onsubmit=async ev=>{
-    ev.preventDefault();flash.hidden=true;
-    const btn=ev.target.querySelector('button[type=submit]');btn.disabled=true;
+    ev.preventDefault();
+    flash.hidden=true;
+    const check=validateLinesClient(linesEl.value);
+    if(check.firstIssue){
+      notify(check.firstIssue);
+      linesEl.focus();
+      return;
+    }
+    if(check.validCount<1){
+      notify('Escribe al menos una combinación (o pulsa "Insertar ejemplo" para probar).');
+      linesEl.focus();
+      return;
+    }
+    const btn=ev.target.querySelector('button[type=submit]');
+    btn.disabled=true;
     try{
       const f=new FormData(ev.target);
       const created=await api('/api/tickets',{
@@ -212,11 +393,35 @@ async function viewHome(){
   };
 }
 
-async function viewTicket(id){
-  await refreshHeader();
-  const t=await api('/api/tickets/'+id);
-  const slips=groupSlips(t.lines);
-  const letters=['A','B','C','D','E'];
+function buildSlipsPlainText(t,slips){
+  const out=[`${t.label} — ${modeLabel(t.mode)} · Sorteos #${t.start_draw}→#${t.end_draw} · Total ${cop(t.cost)} COP`];
+  for(const s of slips){
+    out.push(`\nBoleta #${s.slip_index} (${s.combo}) — ${s.slip_cost_formatted}`);
+    for(const p of s.panels){
+      out.push(`  Panel ${p.panel}: ${p.numbers_formatted.join(' - ')} | SB ${p.superbalota_formatted}`);
+    }
+  }
+  return out.join('\n');
+}
+
+async function viewTicket(id,seq){
+  let health,t;
+  try{
+    [health,t]=await Promise.all([refreshHeader(),api('/api/tickets/'+id)]);
+  }catch(e){
+    if(seq!==renderSeq)return;
+    if(e.status===404){
+      app.innerHTML=`<section class="panel"><h1>Tiquete no encontrado</h1><p class="muted">El registro solicitado no existe o ya fue eliminado.</p><p><a href="/">← Volver a mis tiquetes</a></p></section>`;
+      return;
+    }
+    throw e;
+  }
+  if(seq!==renderSeq)return;
+
+  const slips=t.slips||[];
+  const hasRev=t.mode==='baloto_revancha';
+  const helperCmd=`python3 "${health.carrito_helper_path||'skills/baloto/scripts/carrito_helper.py'}" --ticket-id ${t.id}`;
+
   app.innerHTML=`
   <a href="/">← Volver a todos los tiquetes</a>
   <div style="margin:16px 0 8px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
@@ -226,8 +431,14 @@ async function viewTicket(id){
       <span class="pill ${t.status}">${statusLabel(t.status)}</span>
     </div>
     <div class="buttons">
-      ${t.status==='cart'?'<button id="btn-confirm">✓ Confirmar que ya compré el tiquete</button>':'<button id="btn-sync-ticket">↻ Verificar resultados oficiales</button>'}
-      <button id="btn-delete" class="danger">Eliminar</button>
+      ${t.status==='cart'?`
+        <div class="confirm-box">
+          <label for="confirm-start-draw">Sorteo inicial #</label>
+          <input id="confirm-start-draw" type="number" min="1" max="999999" value="${t.start_draw}">
+          <button id="btn-confirm" type="button"><span aria-hidden="true">✓</span> Confirmar compra</button>
+        </div>
+      `:'<button id="btn-sync-ticket" type="button"><span aria-hidden="true">↻</span> Verificar resultados oficiales</button>'}
+      <button id="btn-delete" class="danger" type="button">Eliminar</button>
     </div>
   </div>
   <div class="cards">
@@ -238,32 +449,37 @@ async function viewTicket(id){
   </div>
 
   <section class="panel">
-    <h2>Boletas y combinaciones (${t.lines.length} líneas · ${slips.length} boleta${slips.length===1?'':'s'} A–E)</h2>
-    <p class="muted">En <code>baloto.com</code> cada boleta agrupa hasta 5 paneles (A–E). Costo por línea/sorteo: <strong>${cop(t.price_per_line)}</strong>.</p>
+    <div class="label-row" style="margin-bottom:10px">
+      <h2 style="margin:0">Boletas y combinaciones (${t.lines.length} línea${t.lines.length===1?'':'s'} · ${slips.length} boleta${slips.length===1?'':'s'} A–E)</h2>
+      <button id="btn-copy-slips" type="button" class="secondary smallbtn">Copiar resumen de boletas</button>
+    </div>
+    <p class="muted">Cada boleta agrupa hasta 5 paneles (A–E). Costo por línea/sorteo: <strong>${cop(t.price_per_line)}</strong>.</p>
     <div class="row">
-      ${slips.map((s,idx)=>`<div style="border:1px solid var(--line);border-radius:12px;padding:14px">
-        <strong>Boleta #${idx+1}${s.combo?' · '+esc(s.combo):''}</strong>
-        <span class="muted" style="float:right;font-size:12px">${cop(s.items.length*t.draw_count*t.price_per_line)}</span>
-        <div style="margin-top:8px;display:grid;gap:6px">
-          ${s.items.map((l,i)=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><strong style="font-size:12px;color:var(--muted)">Panel ${letters[i]}</strong>${renderBalls(l.numbers,l.extra)}</div>`).join('')}
+      ${slips.map(s=>`<div class="slip-card">
+        <div class="slip-head">
+          <strong>Boleta #${s.slip_index} · ${esc(s.combo)}</strong>
+          <span class="muted" style="font-size:12.5px">${esc(s.slip_cost_formatted)}</span>
+        </div>
+        <div class="slip-rows">
+          ${s.panels.map(p=>`<div class="slip-row"><strong style="font-size:12.5px;color:var(--muted)">Panel ${esc(p.panel)}</strong>${renderBalls(p.numbers,p.superbalota)}</div>`).join('')}
         </div>
       </div>`).join('')}
     </div>
-    ${t.status==='cart'?`<div class="help" style="margin-top:12px">Para preparar el carrito desde terminal o agente: <code>python3 skills/baloto/scripts/carrito_helper.py --ticket-id ${t.id}</code></div>`:''}
+    ${t.status==='cart'?`<div class="help" style="margin-top:12px">Para preparar el carrito desde terminal o con tu agente: <code>${esc(helperCmd)}</code></div>`:''}
   </section>
 
   <section class="panel">
     <h2>Resultados por sorteo oficial</h2>
     <div class="tablewrap">
       <table>
-        <thead><tr><th>Sorteo</th><th>Fecha</th><th>Baloto oficial</th><th>Revancha oficial</th><th>Premio ganado</th><th>Estado</th></tr></thead>
+        <thead><tr><th scope="col">Sorteo</th><th scope="col">Fecha</th><th scope="col">Baloto oficial</th>${hasRev?'<th scope="col">Revancha oficial</th>':''}<th scope="col" class="num">Premio ganado</th><th scope="col">Estado</th></tr></thead>
         <tbody>
           ${t.draws.map(d=>`<tr>
             <td><strong>#${d.sorteo}</strong></td>
             <td>${d.result?esc(d.result.fecha):'—'}</td>
-            <td>${d.result?renderBalls(d.result.baloto.numbers,d.result.baloto.extra):'<span class="muted">Pendiente de publicación</span>'}</td>
-            <td>${d.result&&d.result.revancha?renderBalls(d.result.revancha.numbers,d.result.revancha.extra):(t.mode==='baloto'?'<span class="muted">No aplica</span>':'<span class="muted">Pendiente</span>')}</td>
-            <td><strong>${d.result?cop(d.result.prize_cop):'—'}</strong></td>
+            <td>${d.result?renderBalls(d.result.baloto.numbers,d.result.baloto.extra):'<span class="muted">Pendiente de escrutinio oficial</span>'}</td>
+            ${hasRev?`<td>${d.result&&d.result.revancha?renderBalls(d.result.revancha.numbers,d.result.revancha.extra):'<span class="muted">Pendiente</span>'}</td>`:''}
+            <td class="num"><strong>${d.result?cop(d.result.prize_cop):'—'}</strong></td>
             <td>${!d.result?'<span class="pill">Pendiente</span>':(d.result.prize_cop>0?'<span class="pill win">¡Premio!</span>':'<span class="pill">Sin premio</span>')}</td>
           </tr>`).join('')}
         </tbody>
@@ -274,16 +490,23 @@ async function viewTicket(id){
         <summary>Ver aciertos línea por línea · Sorteo #${d.sorteo} (${cop(d.result.prize_cop)})</summary>
         <div class="tablewrap" style="margin-top:8px">
           <table>
-            <thead><tr><th>Línea</th><th>Combinación jugada</th><th>Baloto</th><th>Revancha</th><th>Premio línea</th></tr></thead>
+            <thead><tr><th scope="col">Línea</th><th scope="col">Aciertos Baloto</th>${hasRev?'<th scope="col">Aciertos Revancha</th>':''}<th scope="col" class="num">Premio línea</th></tr></thead>
             <tbody>
               ${d.result.lines.map((lr,idx)=>{
                 const orig=t.lines[idx];
+                const bCat=lr.baloto_category?` <span class="pill win">${esc(lr.baloto_category)}</span>`:'';
+                const rCat=lr.revancha_category?` <span class="pill win">${esc(lr.revancha_category)}</span>`:'';
                 return `<tr>
-                  <td>#${lr.line_index}${lr.combo?' ('+esc(lr.combo)+')':''}</td>
-                  <td>${renderBalls(orig.numbers,orig.extra,d.result.baloto.numbers,d.result.baloto.extra)}</td>
-                  <td>${lr.baloto_hits}/5${lr.baloto_sb?' + SB':''}${lr.baloto_prize_cop?` · <strong>${cop(lr.baloto_prize_cop)}</strong>`:''}</td>
-                  <td>${t.mode==='baloto'?'—':`${lr.revancha_hits}/5${lr.revancha_sb?' + SB':''}${lr.revancha_prize_cop?` · <strong>${cop(lr.revancha_prize_cop)}</strong>`:''}`}</td>
-                  <td><strong>${cop(lr.prize_cop)}</strong></td>
+                  <td><strong>#${lr.line_index}</strong>${lr.combo?' <span class="muted">('+esc(lr.combo)+')</span>':''}</td>
+                  <td>
+                    <div>${renderBalls(orig.numbers,orig.extra,d.result.baloto.numbers,d.result.baloto.extra)}</div>
+                    <div class="help">${lr.baloto_hits}/5${lr.baloto_sb?' + SB':''}${bCat}${lr.baloto_prize_cop?` · <strong>${cop(lr.baloto_prize_cop)}</strong>`:''}</div>
+                  </td>
+                  ${hasRev?`<td>
+                    <div>${d.result.revancha?renderBalls(orig.numbers,orig.extra,d.result.revancha.numbers,d.result.revancha.extra):renderBalls(orig.numbers,orig.extra)}</div>
+                    <div class="help">${lr.revancha_hits}/5${lr.revancha_sb?' + SB':''}${rCat}${lr.revancha_prize_cop?` · <strong>${cop(lr.revancha_prize_cop)}</strong>`:''}</div>
+                  </td>`:''}
+                  <td class="num"><strong>${cop(lr.prize_cop)}</strong></td>
                 </tr>`;
               }).join('')}
             </tbody>
@@ -292,113 +515,189 @@ async function viewTicket(id){
       </details>`).join('')}
   </section>`;
 
+  const copyBtn=document.querySelector('#btn-copy-slips');
+  if(copyBtn)copyBtn.onclick=async()=>{
+    try{
+      await navigator.clipboard.writeText(buildSlipsPlainText(t,slips));
+      notify('Resumen de boletas copiado al portapapeles.','ok');
+    }catch(_){
+      notify('No se pudo acceder al portapapeles automáticamente.');
+    }
+  };
+
   const cBtn=document.querySelector('#btn-confirm');
-  if(cBtn)cBtn.onclick=async()=>{cBtn.disabled=true;try{await api(`/api/tickets/${id}/confirm`,{});notify('Tiquete confirmado como comprado. Puedes sincronizar resultados oficiales.','ok');await viewTicket(id);}catch(e){notify(e.message);cBtn.disabled=false;}};
+  if(cBtn)cBtn.onclick=async()=>{
+    cBtn.disabled=true;
+    try{
+      const startInput=document.querySelector('#confirm-start-draw');
+      const startVal=Number(startInput?.value||t.start_draw);
+      await api(`/api/tickets/${id}/confirm`,{start_draw:startVal});
+      notify('Tiquete confirmado como comprado. Ya puedes sincronizar resultados oficiales.','ok');
+      await viewTicket(id,renderSeq);
+    }catch(e){notify(e.message);cBtn.disabled=false;}
+  };
+
   const sBtn=document.querySelector('#btn-sync-ticket');
-  if(sBtn)sBtn.onclick=async()=>{sBtn.disabled=true;try{const r=await api('/api/sync',{});notify(`Sincronizado con baloto.com hasta el sorteo #${r.latest_sorteo}.`,'ok');await viewTicket(id);}catch(e){notify(e.message);}finally{sBtn.disabled=false;}};
+  if(sBtn)sBtn.onclick=async()=>{
+    sBtn.disabled=true;
+    try{
+      const r=await api('/api/sync',{});
+      notify(`Sincronizado con baloto.com hasta el sorteo #${r.latest_sorteo}.`,'ok');
+      await viewTicket(id,renderSeq);
+    }catch(e){notify(e.message);}finally{sBtn.disabled=false;}
+  };
+
   document.querySelector('#btn-delete').onclick=async()=>{
     if(!confirm('¿Eliminar este tiquete de tu registro local?'))return;
-    try{await api(`/api/tickets/${id}/delete`,{});navigate('/');}catch(e){notify(e.message);}
+    try{await api(`/api/tickets/${id}`,undefined,'DELETE');navigate('/');}catch(e){notify(e.message);}
   };
 }
 
-async function viewStats(game='baloto',last=''){
-  await refreshHeader();
-  const qs=new URLSearchParams({game});if(last)qs.set('last',last);
-  const [st,recent]=await Promise.all([api('/api/history/stats?'+qs.toString()),api('/api/history?limit=40')]);
-  app.innerHTML=`
-  <div>
-    <div class="eyebrow">Dataset oficial incluido en el repositorio</div>
-    <h1>Historial y modelo estadístico</h1>
-    <p class="muted">Explora frecuencias, puntuaciones <em>z</em>, rezagos y prueba χ² de uniformidad sobre los sorteos reales guardados en <code>skills/baloto/data/historial_baloto.csv</code>.</p>
-  </div>
-  <section class="panel">
-    <div class="row">
-      <div>
-        <label for="st-game">Sorteo analizado</label>
-        <select id="st-game">
-          <option value="baloto" ${game==='baloto'?'selected':''}>Baloto principal</option>
-          <option value="revancha" ${game==='revancha'?'selected':''}>Revancha</option>
-          <option value="both" ${game==='both'?'selected':''}>Baloto + Revancha combinados</option>
-        </select>
-      </div>
-      <div>
-        <label for="st-last">Ventana de sorteos</label>
-        <select id="st-last">
-          <option value="" ${!last?'selected':''}>Todo el historial (${st.to_sorteo-st.from_sorteo+1}+ sorteos)</option>
-          <option value="120" ${last==='120'?'selected':''}>Últimos 120 sorteos</option>
-          <option value="60" ${last==='60'?'selected':''}>Últimos 60 sorteos</option>
-          <option value="30" ${last==='30'?'selected':''}>Últimos 30 sorteos</option>
-        </select>
-      </div>
-    </div>
-  </section>
-
+function renderStatsBody(st,recent){
+  return `
   <div class="cards">
     <div class="metric"><span>Sorteos analizados</span><strong>${st.draw_count}</strong><div class="help">#${st.from_sorteo} → #${st.to_sorteo}</div></div>
-    <div class="metric"><span>χ² balotas (gl=42)</span><strong>${st.chi2_numbers.chi2}</strong><div class="help">Umbral p=0,05: 58,12</div></div>
-    <div class="metric"><span>χ² Superbalota (gl=15)</span><strong>${st.chi2_superbalota.chi2}</strong><div class="help">Umbral p=0,05: 25,00</div></div>
-    <div class="metric"><span>Suma media (5 balotas)</span><strong>${st.sum_stats.mean}</strong><div class="help">Mediana: ${st.sum_stats.median} (${st.sum_stats.min}–${st.sum_stats.max})</div></div>
+    <div class="metric"><span>χ² balotas (gl=42)</span><strong>${dec(st.chi2_numbers.chi2,2)}</strong><div class="help">Umbral p=0,05: 58,12</div></div>
+    <div class="metric"><span>χ² Superbalota (gl=15)</span><strong>${dec(st.chi2_superbalota.chi2,2)}</strong><div class="help">Umbral p=0,05: 25,00</div></div>
+    <div class="metric"><span>Suma media (5 balotas)</span><strong>${dec(st.sum_stats.mean,1)}</strong><div class="help">Mediana: ${dec(st.sum_stats.median,1)} (${st.sum_stats.min}–${st.sum_stats.max})</div></div>
   </div>
 
   <div class="row3" style="margin-bottom:20px">
-    <section class="panel" style="margin:0"><h3>Más frecuentes</h3><p class="help">Mayor aparición en la ventana</p>${st.hot_numbers.slice(0,8).map(x=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line)"><span class="ball">${pad(x.number)}</span><span><strong>${x.count}</strong> veces (z=${x.z_score})</span></div>`).join('')}</section>
-    <section class="panel" style="margin:0"><h3>Menos frecuentes</h3><p class="help">Menor aparición en la ventana</p>${st.cold_numbers.slice(0,8).map(x=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line)"><span class="ball">${pad(x.number)}</span><span><strong>${x.count}</strong> veces (z=${x.z_score})</span></div>`).join('')}</section>
-    <section class="panel" style="margin:0"><h3>Mayor rezago</h3><p class="help">Sorteos consecutivos sin salir</p>${st.overdue_numbers.slice(0,8).map(x=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line)"><span class="ball">${pad(x.number)}</span><span>hace <strong>${x.draws_since_seen}</strong> sorteos</span></div>`).join('')}</section>
+    <section class="panel" style="margin:0"><h2>Más frecuentes</h2><p class="help">Mayor aparición en la ventana</p>${st.hot_numbers.slice(0,8).map(x=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line)"><span class="ball">${pad(x.number)}</span><span class="num"><strong>${x.count}</strong> veces (z=${dec(x.z_score,2)})</span></div>`).join('')}</section>
+    <section class="panel" style="margin:0"><h2>Menos frecuentes</h2><p class="help">Menor aparición en la ventana</p>${st.cold_numbers.slice(0,8).map(x=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line)"><span class="ball">${pad(x.number)}</span><span class="num"><strong>${x.count}</strong> veces (z=${dec(x.z_score,2)})</span></div>`).join('')}</section>
+    <section class="panel" style="margin:0"><h2>Mayor rezago</h2><p class="help">Sorteos consecutivos sin salir</p>${st.overdue_numbers.slice(0,8).map(x=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line)"><span class="ball">${pad(x.number)}</span><span class="num">hace <strong>${x.draws_since_seen}</strong> sorteos</span></div>`).join('')}</section>
   </div>
+
+  ${st.top_pairs&&st.top_pairs.length?`
+  <section class="panel">
+    <h2>Pares más frecuentes en la ventana</h2>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      ${st.top_pairs.slice(0,10).map(p=>`<span class="pill" style="gap:6px;padding:6px 12px"><span class="ball">${pad(p.pair[0])}</span><span class="ball">${pad(p.pair[1])}</span> <strong>${p.count}×</strong></span>`).join('')}
+    </div>
+  </section>`:''}
 
   <section class="panel">
     <h2>Tabla completa de frecuencias (1–43 y Superbalota 1–16)</h2>
-    <p class="muted">Apariciones esperadas por balota: <strong>${st.numbers[0].expected}</strong> · Por Superbalota: <strong>${st.superbalotas[0].expected}</strong>. Cada sorteo es independiente; usa estos datos como insumo exploratorio.</p>
+    <p class="muted">Apariciones esperadas por balota: <strong>${dec(st.numbers[0].expected,2)}</strong> · Por Superbalota: <strong>${dec(st.superbalotas[0].expected,2)}</strong>. Cada sorteo es independiente; usa estos datos como insumo exploratorio.</p>
     <details open>
       <summary>Balotas principales (1–43)</summary>
-      <div class="tablewrap"><table><thead><tr><th>Balota</th><th>Apariciones</th><th>Esperado</th><th>Desviación z</th><th>Rezago (sorteos sin salir)</th></tr></thead><tbody>
-        ${st.numbers.map(x=>`<tr><td><span class="ball">${pad(x.number)}</span></td><td><strong>${x.count}</strong></td><td>${x.expected}</td><td>${x.z_score}</td><td>${x.draws_since_seen}</td></tr>`).join('')}
+      <div class="tablewrap"><table><thead><tr><th scope="col">Balota</th><th scope="col" class="num">Apariciones</th><th scope="col" class="num">Esperado</th><th scope="col" class="num">Desviación z</th><th scope="col" class="num">Rezago (sorteos sin salir)</th></tr></thead><tbody>
+        ${st.numbers.map(x=>`<tr><td><span class="ball">${pad(x.number)}</span></td><td class="num"><strong>${x.count}</strong></td><td class="num">${dec(x.expected,2)}</td><td class="num">${dec(x.z_score,3)}</td><td class="num">${x.draws_since_seen}</td></tr>`).join('')}
       </tbody></table></div>
     </details>
     <details>
       <summary>Superbalotas (1–16)</summary>
-      <div class="tablewrap"><table><thead><tr><th>Superbalota</th><th>Apariciones</th><th>Esperado</th><th>Desviación z</th><th>Rezago</th></tr></thead><tbody>
-        ${st.superbalotas.map(x=>`<tr><td><span class="ball sb">★ ${pad(x.number)}</span></td><td><strong>${x.count}</strong></td><td>${x.expected}</td><td>${x.z_score}</td><td>${x.draws_since_seen}</td></tr>`).join('')}
+      <div class="tablewrap"><table><thead><tr><th scope="col">Superbalota</th><th scope="col" class="num">Apariciones</th><th scope="col" class="num">Esperado</th><th scope="col" class="num">Desviación z</th><th scope="col" class="num">Rezago</th></tr></thead><tbody>
+        ${st.superbalotas.map(x=>`<tr><td><span class="ball sb"><span aria-hidden="true">★</span><span class="sr-only">Superbalota </span>${pad(x.number)}</span></td><td class="num"><strong>${x.count}</strong></td><td class="num">${dec(x.expected,2)}</td><td class="num">${dec(x.z_score,3)}</td><td class="num">${x.draws_since_seen}</td></tr>`).join('')}
       </tbody></table></div>
     </details>
   </section>
 
   <section class="panel">
     <h2>Últimos 40 sorteos oficiales registrados</h2>
-    <div class="tablewrap"><table><thead><tr><th>Sorteo</th><th>Fecha</th><th>Baloto</th><th>Revancha</th></tr></thead><tbody>
+    <div class="tablewrap"><table><thead><tr><th scope="col">Sorteo</th><th scope="col">Fecha</th><th scope="col">Baloto</th><th scope="col">Revancha</th></tr></thead><tbody>
       ${recent.map(r=>`<tr><td><strong>#${r.sorteo}</strong></td><td>${esc(r.fecha)}</td><td>${renderBalls(r.baloto,r.sb_baloto)}</td><td>${renderBalls(r.revancha,r.sb_revancha)}</td></tr>`).join('')}
     </tbody></table></div>
   </section>`;
+}
 
-  const gSel=document.querySelector('#st-game'),lSel=document.querySelector('#st-last');
-  const reload=()=>viewStats(gSel.value,lSel.value).catch(e=>notify(e.message));
-  gSel.onchange=reload;lSel.onchange=reload;
+async function viewStats(seq){
+  const params=new URLSearchParams(location.search);
+  const initGame=['baloto','revancha','both'].includes(params.get('game'))?params.get('game'):'baloto';
+  const initLast=params.get('last')||'';
+  const qs=new URLSearchParams({game:initGame});
+  if(initLast)qs.set('last',initLast);
+
+  const [health,st,recent]=await Promise.all([
+    refreshHeader(),
+    api('/api/history/stats?'+qs.toString()),
+    api('/api/history?limit=40'),
+  ]);
+  if(seq!==renderSeq)return;
+
+  app.innerHTML=`
+  <div>
+    <div class="eyebrow">Dataset oficial incluido en el repositorio</div>
+    <h1>Historial y modelo estadístico</h1>
+    <p class="muted">Explora frecuencias, puntuaciones <em>z</em>, rezagos y prueba χ² corregida sin reemplazo sobre los sorteos reales guardados en <code>${esc(health.history_path||'historial_baloto.csv')}</code>.</p>
+  </div>
+  <section class="panel">
+    <div class="row">
+      <div>
+        <label for="st-game">Sorteo analizado</label>
+        <select id="st-game">
+          <option value="baloto" ${initGame==='baloto'?'selected':''}>Baloto principal</option>
+          <option value="revancha" ${initGame==='revancha'?'selected':''}>Revancha</option>
+          <option value="both" ${initGame==='both'?'selected':''}>Baloto + Revancha combinados</option>
+        </select>
+      </div>
+      <div>
+        <label for="st-last">Ventana de sorteos</label>
+        <select id="st-last">
+          <option value="" ${!initLast?'selected':''}>Todo el historial (${health.history_draws} sorteos)</option>
+          <option value="120" ${initLast==='120'?'selected':''}>Últimos 120 sorteos</option>
+          <option value="60" ${initLast==='60'?'selected':''}>Últimos 60 sorteos</option>
+          <option value="30" ${initLast==='30'?'selected':''}>Últimos 30 sorteos</option>
+        </select>
+      </div>
+    </div>
+  </section>
+  <div id="stats-results" aria-live="polite">${renderStatsBody(st,recent)}</div>`;
+
+  const gSel=document.querySelector('#st-game'),lSel=document.querySelector('#st-last'),resWrap=document.querySelector('#stats-results');
+  const reloadStatsOnly=async()=>{
+    const nextQs=new URLSearchParams({game:gSel.value});
+    if(lSel.value)nextQs.set('last',lSel.value);
+    history.replaceState({},'',`/estadisticas?${nextQs.toString()}`);
+    try{
+      const nextSt=await api('/api/history/stats?'+nextQs.toString());
+      resWrap.innerHTML=renderStatsBody(nextSt,recent);
+    }catch(e){notify(e.message);}
+  };
+  gSel.onchange=reloadStatsOnly;
+  lSel.onchange=reloadStatsOnly;
 }
 
 syncBtn.onclick=async()=>{
-  syncBtn.disabled=true;flash.hidden=true;
+  syncBtn.disabled=true;
+  flash.hidden=true;
+  const draft=location.pathname==='/'?captureHomeDraft():null;
   try{
     const r=await api('/api/sync',{});
     notify(`Sincronizado con baloto.com hasta #${r.latest_sorteo} (${r.latest_fecha}). Sorteos nuevos en historial: ${r.history_added.length}.`,'ok');
-    await render(false);
+    await render(false,draft);
   }catch(e){notify(e.message);}finally{syncBtn.disabled=false;}
 };
 
-async function render(clearFlash=true){
+function setNavState(navEl,isCurrent){
+  navEl.classList.toggle('active',isCurrent);
+  if(isCurrent)navEl.setAttribute('aria-current','page');
+  else navEl.removeAttribute('aria-current');
+}
+
+async function render(clearFlash=true,homeDraft=null){
+  const seq=++renderSeq;
   if(clearFlash)flash.hidden=true;
   const p=location.pathname;
-  document.querySelector('#nav-home').classList.toggle('active',p==='/'||p.startsWith('/seguimiento/'));
-  document.querySelector('#nav-stats').classList.toggle('active',p==='/estadisticas');
+  setNavState(document.querySelector('#nav-home'),p==='/'||p.startsWith('/seguimiento/'));
+  setNavState(document.querySelector('#nav-stats'),p==='/estadisticas');
   const m=p.match(/^\/seguimiento\/([a-f0-9]{32})$/);
-  if(m)await viewTicket(m[1]);
-  else if(p==='/estadisticas')await viewStats();
-  else await viewHome();
+  if(m)await viewTicket(m[1],seq);
+  else if(p==='/estadisticas')await viewStats(seq);
+  else await viewHome(seq,homeDraft);
 }
+
 window.addEventListener('popstate',()=>render().catch(e=>notify(e.message)));
 document.addEventListener('click',ev=>{
+  if(ev.defaultPrevented||ev.button!==0||ev.metaKey||ev.ctrlKey||ev.shiftKey||ev.altKey)return;
   const a=ev.target.closest('a');
-  if(a&&a.origin===location.origin&&!ev.ctrlKey&&!ev.metaKey){ev.preventDefault();navigate(a.pathname);}
+  if(!a||a.target||a.hasAttribute('download'))return;
+  const rawHref=a.getAttribute('href')||'';
+  if(!rawHref||rawHref.startsWith('#'))return;
+  if(a.origin===location.origin){
+    ev.preventDefault();
+    navigate(a.pathname+a.search);
+  }
 });
 render().catch(e=>notify(e.message));
 </script>
