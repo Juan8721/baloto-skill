@@ -34,7 +34,7 @@ Confirmar desde CLI un tiquete en carrito una vez comprado:
 python3 scripts/baloto.py --confirm <ticket_id> --start-draw 2729
 ```
 
-Abrir el tablero web local (añade `--require-token` en equipos multiusuario para exigir sesión autenticada por cookie `HttpOnly`):
+Abrir el tablero web local:
 
 ```sh
 python3 scripts/baloto.py --port 8765

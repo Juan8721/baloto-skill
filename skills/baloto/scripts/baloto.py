@@ -10,7 +10,6 @@ import csv
 from datetime import datetime, timezone
 import html as html_lib
 import http.client
-from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from itertools import combinations
 import json
@@ -1336,7 +1335,7 @@ def process_lock(directory: Path | str):
 # Servidor HTTP local
 # ---------------------------------------------------------------------------
 
-def make_handler(store: Store, token: str, fetcher=fetch_html, require_token: bool = False):
+def make_handler(store: Store, token: str, fetcher=fetch_html):
     if not isinstance(token, str) or not re.fullmatch(r'[A-Za-z0-9_-]{12,128}', token):
         raise ValueError('Token de seguridad inválido para el servidor local.')
 
@@ -1356,7 +1355,7 @@ def make_handler(store: Store, token: str, fetcher=fetch_html, require_token: bo
             pass
 
         def respond(self, code: int, value, content_type: str = 'application/json; charset=utf-8',
-                    csp_nonce: str | None = None, extra_headers: dict[str, str] | None = None):
+                    csp_nonce: str | None = None):
             data = (json.dumps(value, ensure_ascii=False).encode('utf-8')
                     if content_type.startswith('application/json')
                     else value.encode('utf-8'))
@@ -1375,9 +1374,6 @@ def make_handler(store: Store, token: str, fetcher=fetch_html, require_token: bo
             else:
                 csp = "default-src 'none'; frame-ancestors 'none'"
             self.send_header('Content-Security-Policy', csp)
-            if extra_headers:
-                for hdr_k, hdr_v in extra_headers.items():
-                    self.send_header(hdr_k, hdr_v)
             self.end_headers()
             self.wfile.write(data)
 
@@ -1388,23 +1384,6 @@ def make_handler(store: Store, token: str, fetcher=fetch_html, require_token: bo
         def fetch_site_ok(self) -> bool:
             sfs = (self.headers.get('Sec-Fetch-Site') or '').strip().lower()
             return not sfs or sfs in ('same-origin', 'none')
-
-        def session_ok(self) -> bool:
-            if not require_token:
-                return True
-            if secrets.compare_digest(self.headers.get('X-CSRF-Token', ''), token):
-                return True
-            raw_cookie = self.headers.get('Cookie', '')
-            if raw_cookie:
-                jar = SimpleCookie()
-                try:
-                    jar.load(raw_cookie)
-                except Exception:
-                    return False
-                morsel = jar.get('baloto_auth')
-                if morsel and secrets.compare_digest(morsel.value, token):
-                    return True
-            return False
 
         def check_mutation_headers(self) -> bool:
             if not self.host_ok() or not secrets.compare_digest(self.headers.get('X-CSRF-Token', ''), token):
@@ -1426,25 +1405,6 @@ def make_handler(store: Store, token: str, fetcher=fetch_html, require_token: bo
             parsed = urlsplit(self.path)
             path = parsed.path
             query = parse_qs(parsed.query)
-
-            if require_token and 'auth' in query:
-                candidate = query['auth'][0]
-                if not secrets.compare_digest(candidate, token):
-                    return self.respond(403, {'error': 'Token de acceso inválido.'})
-                return self.respond(
-                    303,
-                    '',
-                    'text/plain; charset=utf-8',
-                    extra_headers={
-                        'Location': path or '/',
-                        'Set-Cookie': f'baloto_auth={token}; HttpOnly; SameSite=Strict; Path=/',
-                    },
-                )
-
-            if not self.session_ok():
-                return self.respond(401, {
-                    'error': 'Sesión local protegida con --require-token. Abre el enlace impreso en la terminal.'
-                })
 
             if path.startswith('/api/') and not self.fetch_site_ok():
                 return self.respond(403, {'error': 'Contexto Fetch no autorizado.'})
@@ -1608,8 +1568,6 @@ def main(argv=None) -> None:
                         help='Calcula estadísticas sobre el historial oficial y sale.')
     parser.add_argument('--game', choices=['baloto', 'revancha', 'both'], default='baloto')
     parser.add_argument('--last', type=int, help='Limita --stats a los últimos N sorteos.')
-    parser.add_argument('--require-token', action='store_true',
-                        help='Exige abrir el tablero web con el enlace autenticado (?auth=<token>) impreso en consola.')
     parser.add_argument('--json', action='store_true', help='Imprime salida en formato JSON.')
     args = parser.parse_args(argv)
 
@@ -1699,7 +1657,7 @@ def main(argv=None) -> None:
     with process_lock(args.data_dir):
         store = Store(args.data_dir, history_path=args.history)
         token = secrets.token_hex(24)
-        handler = make_handler(store, token, require_token=args.require_token)
+        handler = make_handler(store, token)
         with ThreadingHTTPServer(('127.0.0.1', args.port), handler) as server:
             server.daemon_threads = True
             created = store.create(payload) if payload is not None else None
@@ -1720,11 +1678,9 @@ def main(argv=None) -> None:
             thread.start()
 
             address = f'http://127.0.0.1:{args.port}'
-            entry_url = f'{address}/?auth={token}' if args.require_token else address
-            print(f'Baloto — Seguimiento y estadística local\n{entry_url}', flush=True)
+            print(f'Baloto — Seguimiento y estadística local\n{address}', flush=True)
             if created:
-                suffix = f'?auth={token}' if args.require_token else ''
-                print(address + created['url'] + suffix, flush=True)
+                print(address + created['url'], flush=True)
             print(f'Datos privados: {store.directory}\nHistorial: {store.history_path}\nCtrl+C para detener.',
                   flush=True)
 

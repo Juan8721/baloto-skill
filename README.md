@@ -38,7 +38,7 @@ También puedes instalar en un agente específico (`--agent antigravity`, `--age
 python3 skills/baloto/scripts/baloto.py --port 8765
 ```
 
-Abre **http://127.0.0.1:8765** en tu navegador *(en entornos multiusuario puedes añadir `--require-token` para exigir el enlace autenticado impreso en consola)*:
+Abre **http://127.0.0.1:8765** en tu navegador:
 - En **Mis tiquetes** puedes registrar combinaciones en carrito con validación en vivo o marcar tiquetes ya comprados para verificar resultados oficiales en COP.
 - En **Historial y estadística** (`/estadisticas`) puedes explorar frecuencias, puntuaciones *z*, prueba $\chi^2$ corregida sin reemplazo, pares frecuentes y rezagos tanto para **Baloto** como para **Revancha**.
 
@@ -106,7 +106,7 @@ python3 skills/baloto/scripts/baloto.py --check
 ## Privacidad y pruebas
 
 - Los tiquetes personales se guardan fuera del repositorio en `~/.local/share/baloto/state.json` (o `%LOCALAPPDATA%\baloto\state.json` en Windows) con escritura atómica, bloqueo transaccional (`.store.lock`) y permisos restringidos (`0700` directorio / `0600` archivo).
-- El servidor escucha únicamente en `127.0.0.1` y protege las operaciones con validación de `Host`, `Origin`, `Sec-Fetch-Site`, CSP con `nonce` aleatorio por respuesta, token CSRF independiente y modo opcional `--require-token`.
+- El servidor escucha únicamente en `127.0.0.1` y protege las operaciones con validación de `Host`, `Origin`, `Sec-Fetch-Site`, CSP con `nonce` aleatorio por respuesta y token CSRF independiente.
 
 Ejecutar toda la suite de pruebas (sin red ni cuentas externas):
 

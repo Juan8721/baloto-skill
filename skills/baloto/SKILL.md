@@ -37,7 +37,7 @@ Resuelve siempre la carpeta real de esta skill (p. ej. relativa a este `SKILL.md
   ```sh
   python3 scripts/baloto.py --stats --game baloto
   ```
-- **Levantar el tablero web local (`http://127.0.0.1:8765`, opcionalmente `--require-token`):**
+- **Levantar el tablero web local (`http://127.0.0.1:8765`):**
   ```sh
   python3 scripts/baloto.py --port 8765
   ```

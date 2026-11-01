@@ -731,18 +731,6 @@ class HttpApiTests(unittest.TestCase):
             )
             self.assertEqual(code_500, 500)
 
-    def test_require_token_cookie_gate(self):
-        gated_cls = self.baloto.make_handler(self.store, self.token, fetcher=self.pages.__getitem__, require_token=True)
-        self.assertEqual(dispatch_http(gated_cls, 'GET', '/api/health')[0], 401)
-        self.assertEqual(dispatch_http(gated_cls, 'GET', '/?auth=wrongtoken')[0], 403)
-        code_login, hdrs_login, _ = dispatch_http(gated_cls, 'GET', f'/?auth={self.token}')
-        self.assertEqual(code_login, 303)
-        self.assertIn(f'baloto_auth={self.token}', hdrs_login['set-cookie'])
-        self.assertEqual(
-            dispatch_http(gated_cls, 'GET', '/api/health', headers={'Cookie': f'baloto_auth={self.token}'})[0],
-            200,
-        )
-
     def test_live_tcp_server(self):
         # Real loopback TCP test (runs in CI; gracefully skipped only if OS sandbox blocks sockets)
         try:
