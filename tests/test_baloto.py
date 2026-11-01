@@ -116,11 +116,13 @@ class HistoryTests(unittest.TestCase):
         self.assertNotIn(b'\r\n', raw_bytes, 'historial_baloto.csv debe usar finales de línea LF')
 
         rows = self.baloto.load_history(csv_path)
-        self.assertGreaterEqual(len(rows), 369)
-        self.assertEqual(rows[0]['sorteo'], 2360)
-        self.assertEqual(rows[0]['fecha'], '2024-01-03')
+        self.assertGreaterEqual(len(rows), 625)
+        self.assertEqual(rows[0]['sorteo'], 2104)
+        self.assertEqual(rows[0]['fecha'], '2021-07-21')
         sorteos = [r['sorteo'] for r in rows]
-        self.assertEqual(sorteos, list(range(rows[0]['sorteo'], rows[-1]['sorteo'] + 1)))
+        # baloto.com no publica el #2685 (festivo 20-jul-2026): es el único número omitido.
+        expected = [s for s in range(rows[0]['sorteo'], rows[-1]['sorteo'] + 1) if s != 2685]
+        self.assertEqual(sorteos, expected)
 
         by_sorteo = {r['sorteo']: r for r in rows}
         self.assertEqual(by_sorteo[2681]['baloto'], [3, 22, 28, 32, 34])
@@ -128,6 +130,13 @@ class HistoryTests(unittest.TestCase):
         self.assertEqual(by_sorteo[2681]['revancha'], [29, 35, 38, 41, 42])
         self.assertEqual(by_sorteo[2681]['sb_revancha'], 2)
         self.assertNotEqual(by_sorteo[2681]['revancha'], by_sorteo[2678]['revancha'])
+        # Correcciones verificadas contra las páginas oficiales de detalle de baloto.com
+        self.assertEqual(by_sorteo[2507]['baloto'], [2, 8, 16, 28, 31])
+        self.assertEqual(by_sorteo[2610]['baloto'], [20, 26, 31, 38, 42])
+        self.assertEqual(by_sorteo[2610]['revancha'], [15, 16, 20, 29, 39])
+        self.assertEqual(by_sorteo[2623]['sb_baloto'], 14)
+        self.assertEqual(by_sorteo[2643]['baloto'], [4, 11, 12, 21, 26])
+        self.assertEqual((by_sorteo[2667]['baloto'], by_sorteo[2667]['sb_baloto']), ([6, 8, 9, 32, 40], 13))
 
         prev_fecha = ''
         for row in rows:
@@ -278,6 +287,31 @@ class HistoryTests(unittest.TestCase):
             }
             with self.assertRaises(self.baloto.UpstreamSyncError):
                 self.baloto.sync_history(csv_path, fetcher=huge_pages.__getitem__)
+
+    def test_sync_history_skips_nonexistent_official_draw_number(self):
+        # baloto.com redirige un número inexistente (p. ej. #2685) al último sorteo publicado.
+        with tempfile.TemporaryDirectory() as tmp:
+            csv_path = Path(tmp) / 'historial_baloto.csv'
+            self.baloto.save_history([
+                {'sorteo': 2684, 'fecha': '2026-07-18',
+                 'baloto': [8, 17, 19, 24, 26], 'sb_baloto': 9,
+                 'revancha': [5, 6, 31, 32, 34], 'sb_revancha': 8}
+            ], csv_path)
+            latest_detail = make_detalle_html(
+                sorteo=2686, weekday_txt='Miércoles', date_only_txt='22 de Julio de 2026',
+                nums=(3, 6, 19, 30, 33), sb=9,
+            )
+            pages = {
+                'https://baloto.com/resultados': make_resultados_html(
+                    sorteo=2686, weekday_txt='Miércoles', date_only_txt='22 de Julio de 2026',
+                    baloto=(3, 6, 19, 30, 33), sb_b=9, revancha=(3, 6, 18, 32, 33), sb_r=7,
+                ),
+                'https://baloto.com/resultados-baloto/2685': latest_detail,
+                'https://baloto.com/resultados-revancha/2685': latest_detail,
+            }
+            summary = self.baloto.sync_history(csv_path, fetcher=pages.__getitem__)
+            self.assertEqual(summary['added'], [2686])
+            self.assertEqual([r['sorteo'] for r in self.baloto.load_history(csv_path)], [2684, 2686])
 
     def test_fetch_html_restricts_scheme_hosts_redirects_and_size(self):
         with self.assertRaises(self.baloto.UpstreamSyncError):

@@ -97,11 +97,13 @@ def _merge_installed_history(baloto_mod, source_csv: Path, existing_csv: Path, s
         old_rows = baloto_mod.load_history(existing_csv)
     except ValueError:
         return
-    by_sorteo = {r['sorteo']: r for r in old_rows}
-    # El paquete fuente tiene prioridad sobre sorteos incluidos (corrige erratas oficiales);
-    # los sorteos más recientes sincronizados localmente se conservan.
-    for r in src_rows:
-        by_sorteo[r['sorteo']] = r
+    by_sorteo = {r['sorteo']: r for r in src_rows}
+    # El paquete fuente es la referencia verificada (corrige erratas y elimina números inexistentes);
+    # solo se conservan los sorteos sincronizados localmente que sean más recientes que el paquete.
+    newest_src = max(by_sorteo) if by_sorteo else 0
+    for r in old_rows:
+        if r['sorteo'] > newest_src:
+            by_sorteo[r['sorteo']] = r
     if len(by_sorteo) > len(src_rows):
         baloto_mod.save_history(list(by_sorteo.values()), staged_csv)
 

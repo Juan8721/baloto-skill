@@ -83,6 +83,10 @@ class UpstreamSyncError(ValueError):
     """Error al consultar o interpretar una respuesta HTML oficial de baloto.com."""
 
 
+class DrawNotFoundError(UpstreamSyncError):
+    """baloto.com no publica ese número de sorteo (p. ej. #2685, omitido por el festivo del 20-jul-2026)."""
+
+
 def reconfigure_stdio() -> None:
     """Fuerza UTF-8 en stdout/stderr para evitar fallos con cp1252 en Windows."""
     for stream in (sys.stdout, sys.stderr):
@@ -594,7 +598,7 @@ def parse_detail_draw_html(html: str, expected_sorteo: int | None = None,
     if sorteo is None:
         raise UpstreamSyncError('No se pudo determinar el número de sorteo en el detalle.')
     if expected_sorteo is not None and sorteo != expected_sorteo:
-        raise UpstreamSyncError(f'El detalle devolvió sorteo #{sorteo} en lugar de #{expected_sorteo}.')
+        raise DrawNotFoundError(f'El detalle devolvió sorteo #{sorteo} en lugar de #{expected_sorteo}.')
 
     balls = re.findall(
         r'class=["\'](?:[^"\']*\b)?(?:yellow-ball|red-ball)\b[^"\']*["\']>\s*(\d+)\s*</div>',
@@ -642,9 +646,13 @@ def _plan_history_sync(existing: list[dict], fetcher=fetch_html,
         if s == latest['sorteo']:
             record = latest
         else:
-            det_b = parse_detail_draw_html(
-                fetcher(DETALLE_BALOTO_URL.format(sorteo=s)), expected_sorteo=s, require_prizes=False
-            )
+            try:
+                det_b = parse_detail_draw_html(
+                    fetcher(DETALLE_BALOTO_URL.format(sorteo=s)), expected_sorteo=s, require_prizes=False
+                )
+            except DrawNotFoundError:
+                # baloto.com redirige números inexistentes al último sorteo: no hubo sorteo con ese número.
+                continue
             det_r = parse_detail_draw_html(
                 fetcher(DETALLE_REVANCHA_URL.format(sorteo=s)), expected_sorteo=s, require_prizes=False
             )
@@ -1226,7 +1234,11 @@ class Store:
                 existing_cached = cached_snapshot.get(key)
                 if self._is_draw_ready_for_ticket(existing_cached, need_rev):
                     continue
-                entry = self._fetch_official_draw_entry(sorteo, need_rev, existing_cached, fetcher)
+                try:
+                    entry = self._fetch_official_draw_entry(sorteo, need_rev, existing_cached, fetcher)
+                except DrawNotFoundError:
+                    # Número de sorteo inexistente en baloto.com: no bloquea la sincronización del resto.
+                    continue
                 if entry is not None:
                     fetched_draws[key] = entry
 

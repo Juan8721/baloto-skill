@@ -4,11 +4,11 @@ El paquete incluye el historial verificado de sorteos de **Baloto y Revancha** e
 
 ## 1. Esquema del dataset (`data/historial_baloto.csv`)
 
-Archivo CSV UTF-8 (finales de línea `LF`) ordenado ascendentemente por número de sorteo sin huecos ni duplicados:
+Archivo CSV UTF-8 (finales de línea `LF`) ordenado ascendentemente por número de sorteo, sin duplicados, desde el `#2104` (21-jul-2021). Cada sorteo fue contrastado con su página oficial de detalle en `baloto.com` y cruzado con el dataset independiente [Cha0smagick/Baloto-oracle](https://github.com/Cha0smagick/Baloto-oracle) (MIT). El único número ausente es el `#2685`: `baloto.com` no lo publica (el 20-jul-2026, festivo, no hubo sorteo y la numeración salta del `#2684` al `#2686`).
 
 | Columna | Tipo | Descripción |
 |---|---|---|
-| `sorteo` | `int` | Número oficial del sorteo (p. ej. `2360` … `2728+`) |
+| `sorteo` | `int` | Número oficial del sorteo (p. ej. `2104` … `2729+`) |
 | `fecha` | `YYYY-MM-DD` | Fecha oficial en formato ISO para ordenar y filtrar directamente |
 | `b1..b5` | `int` (`1..43`) | Cinco balotas principales de Baloto ordenadas de menor a mayor |
 | `sb_baloto` | `int` (`1..16`) | Superbalota oficial de Baloto |
