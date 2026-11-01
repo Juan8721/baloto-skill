@@ -7,6 +7,7 @@ import io
 import json
 import os
 from pathlib import Path
+import random
 import re
 import shutil
 import stat
@@ -749,6 +750,16 @@ class HttpApiTests(unittest.TestCase):
         self.assertEqual(code_del, 200)
         self.assertEqual(dispatch_http(self.handler_cls, 'GET', f"/api/tickets/{created['id']}")[0], 404)
 
+        # GET /api/suggest
+        code_sug, _, sug_raw = dispatch_http(self.handler_cls, 'GET', '/api/suggest?count=2&strategy=balanced')
+        self.assertEqual(code_sug, 200)
+        sug_data = json.loads(sug_raw)
+        self.assertEqual(sug_data['count'], 2)
+        self.assertEqual(len(sug_data['lines']), 2)
+        self.assertIn('Sugerencia 1:', sug_data['text'])
+        self.assertEqual(dispatch_http(self.handler_cls, 'GET', '/api/suggest?count=999')[0], 400)
+        self.assertEqual(dispatch_http(self.handler_cls, 'GET', '/api/suggest?strategy=invalida')[0], 400)
+
     def test_http_502_on_timeout_urlerror_and_500_on_disk_oserror(self):
         auth = {'X-CSRF-Token': self.token}
         for net_exc in (TimeoutError('timed out'), URLError('dns failure'), self.baloto.UpstreamSyncError('bad html')):
@@ -1006,6 +1017,99 @@ class InstallerTests(unittest.TestCase):
             )
             self.assertNotEqual(refused.returncode, 0)
             self.assertTrue((foreign_target / 'SKILL.md').exists())
+
+
+class SuggestionAndAdvancedStatsTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.baloto = load_module('baloto', 'skills/baloto/scripts/baloto.py')
+
+    def test_compute_stats_includes_odd_even_high_low_consecutives_and_bayesian(self):
+        rows = self.baloto.load_history(ROOT / 'skills/baloto/data/historial_baloto.csv')
+        st = self.baloto.compute_stats(rows, game='baloto')
+        self.assertIn('odd_even', st)
+        self.assertIn('high_low', st)
+        self.assertIn('consecutive_pairs', st)
+        self.assertIn('bayesian', st)
+        self.assertIn('q25', st['sum_stats'])
+        self.assertIn('q75', st['sum_stats'])
+        self.assertIn('std', st['sum_stats'])
+
+        # Probabilidades bayesianas
+        self.assertEqual(len(st['bayesian']['top_numbers']), 10)
+        self.assertEqual(len(st['bayesian']['top_superbalotas']), 5)
+        self.assertAlmostEqual(sum(st['bayesian']['all_number_scores'].values()), 5.0, places=2)
+        self.assertAlmostEqual(sum(st['bayesian']['all_sb_scores'].values()), 1.0, places=2)
+
+        # Patrones par/impar
+        self.assertIn('most_common', st['odd_even'])
+        self.assertIn('percentages', st['odd_even'])
+        pct_sum = sum(st['odd_even']['percentages'].values())
+        self.assertAlmostEqual(pct_sum, 100.0, delta=1.0)
+
+    def test_generate_suggested_lines_all_strategies(self):
+        rows = self.baloto.load_history(ROOT / 'skills/baloto/data/historial_baloto.csv')
+        strategies = ['bayesian', 'balanced', 'hot', 'cold', 'anti_collision']
+
+        for strat in strategies:
+            res = self.baloto.generate_suggested_lines(
+                rows,
+                count=2,
+                strategy=strat,
+                game='baloto',
+                combo_label='Test',
+                rng=random.Random(12345),
+            )
+            self.assertEqual(res['count'], 2)
+            self.assertEqual(len(res['lines']), 2)
+            self.assertEqual(res['strategy'], strat)
+            self.assertIn('Test:', res['text'])
+
+            for entry in res['lines']:
+                nums = entry['numbers']
+                sb = entry['extra']
+                self.assertEqual(len(nums), 5)
+                self.assertEqual(len(set(nums)), 5)
+                self.assertEqual(nums, sorted(nums))
+                self.assertTrue(all(1 <= n <= 43 for n in nums))
+                self.assertTrue(1 <= sb <= 16)
+
+                if strat == 'anti_collision':
+                    # Teoría de juegos: al menos 2 números > 31
+                    self.assertGreaterEqual(sum(1 for n in nums if n > 31), 2)
+                elif strat == 'balanced':
+                    # Par/impar equilibrado
+                    odds = sum(1 for n in nums if n % 2 != 0)
+                    self.assertIn(odds, (2, 3))
+
+        # Validación de parámetros
+        with self.assertRaises(ValueError):
+            self.baloto.generate_suggested_lines(rows, count=0)
+        with self.assertRaises(ValueError):
+            self.baloto.generate_suggested_lines(rows, count=51)
+        with self.assertRaises(ValueError):
+            self.baloto.generate_suggested_lines(rows, strategy='fantasma')
+
+    def test_cli_suggest_output_and_json(self):
+        csv_path = str(ROOT / 'skills/baloto/data/historial_baloto.csv')
+        script = str(ROOT / 'skills/baloto/scripts/baloto.py')
+
+        out_txt = subprocess.run(
+            [sys.executable, script, '--history', csv_path, '--suggest', '2', '--strategy', 'bayesian'],
+            capture_output=True, text=True, encoding='utf-8', check=True,
+        )
+        lines = out_txt.stdout.strip().splitlines()
+        self.assertEqual(len(lines), 2)
+        self.assertIn('Sugerencia 1:', lines[0])
+        self.assertIn('Sugerencia 2:', lines[1])
+
+        out_json = subprocess.run(
+            [sys.executable, script, '--history', csv_path, '--suggest', '1', '--strategy', 'anti_collision', '--json'],
+            capture_output=True, text=True, encoding='utf-8', check=True,
+        )
+        data = json.loads(out_json.stdout)
+        self.assertEqual(data['strategy'], 'anti_collision')
+        self.assertEqual(len(data['lines']), 1)
 
 
 if __name__ == '__main__':

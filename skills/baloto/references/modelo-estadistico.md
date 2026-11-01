@@ -43,13 +43,42 @@ Métricas calculadas por `compute_stats` en [`../scripts/baloto.py`](../scripts/
 - **Frecuencia observada vs. esperada** ($E = M \times 5/43$ en balotas y $E = M / 16$ en Superbalota) y **puntuación $z$ hipergeométrica/binomial** para cada número.
 - **Prueba $\chi^2$ de bondad de ajuste corregida sin reemplazo:** al extraer $k=5$ balotas distintas de $N=43$ en cada sorteo, $\mathbb{E}[\sum_{i=1}^{43} (C_i - E)^2 / E] = N - k = 38$, por lo que se aplica el factor exacto $\frac{N-1}{N-k} = \frac{42}{38}$ para comparar contra $\chi^2_{42}$ (umbral $p=0{,}05$: `58,12`), junto con $\chi^2_{15}$ en Superbalota (umbral $p=0{,}05$: `25,00`).
 - **Rezago (`draws_since_seen`):** cuántos sorteos consecutivos lleva cada balota o Superbalota sin salir (`0` = salió en el último sorteo).
-- **Pares más frecuentes (`top_pairs`)** y **estadísticos de la suma** (`min`, `max`, `mean`, `median`) de las 5 balotas.
+- **Pares más frecuentes (`top_pairs`)** y **estadísticos de la suma** (`min`, `max`, `mean`, `median`, `std`, y cuartiles `q25`–`q75`).
+- **Balance Par / Impar (`odd_even`):** conteo y porcentajes de patrones (`3I-2P`, `2I-3P`, `4I-1P`, etc.). En más del 65% de los sorteos observados la combinación tiene 2 o 3 impares.
+- **Balance Alto / Bajo (`high_low`):** distribución de números entre la mitad baja (`1–22`) y la mitad alta (`23–43`).
+- **Números consecutivos (`consecutive_pairs`):** porcentaje de sorteos con 0 pares consecutivos vs. al menos 1 par consecutivo (~41% histórico).
+- **Modelo Bayesiano Beta-Binomial (`bayesian`):** probabilidades posteriores normalizadas combinando el prior histórico y la verosimilitud de los últimos 50 sorteos.
 
-## 3. Guía para construir modelos propios en Python
+## 3. Generación de jugadas sugeridas por CLI y Web
 
-El agente puede leer [`../data/historial_baloto.csv`](../data/historial_baloto.csv) directamente con el módulo estándar `csv` (o `pandas` si el entorno del usuario lo tiene) para implementar el enfoque que pida el usuario:
+El motor incluye un generador estocástico con filtros combinatorios y teoría de juegos:
 
-1. **Muestreo ponderado por frecuencia o rezago:** asignar pesos suaves a números según ventana reciente o sorteos sin aparecer.
-2. **Filtros estructurales de suma y paridad:** restringir combinaciones cuya suma de 5 balotas caiga cerca del rango intercuartílico histórico (~90–130) o equilibrar pares/impares (2–3 o 3–2) y decenas.
-3. **Diseño sistemático / cobertura (*wheeling*):** dado un subconjunto de $k$ números elegidos por el usuario (p. ej. 10–15 balotas), generar $N$ líneas que maximicen la cobertura de ternas `(3 aciertos)` sin duplicar combinaciones.
-4. **Optimización de pago esperado en caso de acierto (anti-colisión):** evitar fechas de cumpleaños (`1..31` concentrados), secuencias aritméticas (`01-02-03-04-05`) o patrones geométricos del tarjetón reduce la probabilidad de compartir un acumulado con otros apostadores.
+```sh
+# Sugerencia bayesiana (Beta-Binomial)
+python3 scripts/baloto.py --suggest 3 --strategy bayesian
+
+# Sugerencia con filtros estructurales (Par/Impar 3/2 o 2/3, IQR de suma, ≤1 consecutivo)
+python3 scripts/baloto.py --suggest 2 --strategy balanced
+
+# Estrategia anti-colisión (al menos 2 números >31, sin patrones de calendario)
+python3 scripts/baloto.py --suggest 1 --strategy anti_collision
+
+# Piping directo para registrar en el carrito local
+python3 scripts/baloto.py --suggest 2 --strategy balanced | python3 scripts/baloto.py --prepare - --no-serve
+```
+
+Estrategias disponibles:
+1. `bayesian`: Muestreo ponderado por actualización conjugada Beta-Binomial ($\alpha = C_{\text{hist}} + 1 + C_{\text{rec}}, \beta = T_{\text{hist}} - C_{\text{hist}} + 1 + T_{\text{rec}} - C_{\text{rec}}$) con descarte de combinaciones íntegramente de cumpleaños ($\le 31$).
+2. `balanced`: Fuerza paridad equilibrada (3/2 o 2/3), balance alto/bajo, suma en rango intercuartílico ($Q_1 \le \sum \le Q_3$) y máximo un par consecutivo.
+3. `anti_collision`: Diseñada desde la teoría de juegos para maximizar el retorno esperado en caso de acierto; favorece números $\ge 32$ y penaliza números sobrejugados por fechas de nacimiento o patrones geométricos para no dividir acumulados.
+4. `hot`: Favorece números con mayor frecuencia relativa reciente ($z > 0$).
+5. `cold`: Favorece números con mayor rezago de sorteos consecutivos sin salir.
+
+## 4. Rigor científico: Validación empírica de no-predictibilidad
+
+El dataset fue analizado exhaustivamente por el profesor Alejandro Quintero en [Cha0smagick/Baloto-oracle](https://github.com/Cha0smagick/Baloto-oracle) mediante pruebas *walk-forward out-of-sample* (entrenar modelos Random Forest, Regresión Logística, Cadenas de Markov y Modelos Bayesianos exclusivamente con el pasado y evaluar en sorteos futuros reales sin filtración de datos).
+
+Conclusiones empíricas clave:
+- **Ausencia de poder predictivo:** Ningún modelo estadístico ni de aprendizaje automático logra un *lift* estadísticamente significativo sobre la línea base del azar ($5/43 \approx 11{,}63\%$).
+- **Aleatoriedad confirmada:** Las pruebas de rachas de Wald-Wolfowitz, Ljung-Box y bondad de ajuste $\chi^2$ no rechazan la hipótesis nula $H_0$ de independencia estocástica entre sorteos.
+- **Propósito real de las estrategias:** Los filtros combinatorios y el modelo bayesiano son herramientas para estructuración sistemática y **optimización de valor esperado anti-colisión** (no compartir premio), nunca métodos para garantizar aciertos sobre el bombo.

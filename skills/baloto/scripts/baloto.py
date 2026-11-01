@@ -16,6 +16,7 @@ import json
 import math
 import os
 from pathlib import Path
+import random
 import re
 import secrets
 import signal
@@ -71,6 +72,14 @@ HISTORY_COLUMNS = [
     'b1', 'b2', 'b3', 'b4', 'b5', 'sb_baloto',
     'r1', 'r2', 'r3', 'r4', 'r5', 'sb_revancha',
 ]
+
+SUGGESTION_STRATEGIES = {
+    'bayesian': 'Ponderación bayesiana Beta-Binomial (prior histórico + verosimilitud reciente de 50 sorteos) con filtro anti-cumpleaños.',
+    'balanced': 'Filtros estructurales históricos: balance Par/Impar (3/2 o 2/3), Alto/Bajo (1-22 vs 23-43) y suma en rango intercuartílico.',
+    'hot': 'Favorece los números con mayor frecuencia relativa y z-score positivo en la ventana analizada.',
+    'cold': 'Favorece los números con mayor rezago de sorteos consecutivos sin salir.',
+    'anti_collision': 'Teoría de juegos anti-colisión: al menos 2 números entre 32 y 43 y sin patrones de calendario para no dividir acumulados.',
+}
 
 DEFAULT_HISTORY_PATH = Path(__file__).resolve().parents[1] / 'data/historial_baloto.csv'
 COMBO_LABEL_RE = re.compile(r'[\w\s.#-]+', re.UNICODE)
@@ -398,14 +407,29 @@ def compute_stats(rows: list[dict], game: str = 'baloto', last: int | None = Non
     num_counts: Counter[int] = Counter()
     sb_counts: Counter[int] = Counter()
     pair_counts: Counter[tuple[int, int]] = Counter()
+    odd_even_counts: Counter[str] = Counter()
+    high_low_counts: Counter[str] = Counter()
+    consecutive_counts: Counter[int] = Counter()
     sums = []
 
     for nums, sb in samples:
-        num_counts.update(nums)
+        sorted_nums = sorted(nums)
+        num_counts.update(sorted_nums)
         sb_counts[sb] += 1
-        sums.append(sum(nums))
-        for a, b in combinations(sorted(nums), 2):
+        sums.append(sum(sorted_nums))
+        for a, b in combinations(sorted_nums, 2):
             pair_counts[(a, b)] += 1
+
+        odds = sum(1 for x in sorted_nums if x % 2 != 0)
+        evens = 5 - odds
+        odd_even_counts[f'{odds}I-{evens}P'] += 1
+
+        lows = sum(1 for x in sorted_nums if x <= 22)
+        highs = 5 - lows
+        high_low_counts[f'{lows}B-{highs}A'] += 1
+
+        consec = sum(1 for i in range(4) if sorted_nums[i + 1] == sorted_nums[i] + 1)
+        consecutive_counts[consec] += 1
 
     def lag_for(target: int, is_sb: bool = False) -> int:
         idx = 1 if is_sb else 0
@@ -457,6 +481,52 @@ def compute_stats(rows: list[dict], game: str = 'baloto', last: int | None = Non
         for (a, b), cnt in sorted(pair_counts.items(), key=lambda kv: (-kv[1], kv[0]))[:15]
     ]
 
+    # Modelo Bayesiano Beta-Binomial (prior global + verosimilitud de últimos 50 sorteos)
+    recent_w = min(50, m)
+    recent_num_counts: Counter[int] = Counter()
+    recent_sb_counts: Counter[int] = Counter()
+    for r_nums, r_sb in samples[-recent_w:]:
+        recent_num_counts.update(r_nums)
+        recent_sb_counts[r_sb] += 1
+
+    prior_total_num = m * 5
+    recent_total_num = recent_w * 5
+    bayesian_num_scores = {}
+    for n in range(1, 44):
+        c_h = num_counts[n]
+        c_r = recent_num_counts[n]
+        alpha_post = c_h + 1 + c_r
+        beta_post = (prior_total_num - c_h + 1) + (recent_total_num - c_r)
+        bayesian_num_scores[n] = alpha_post / (alpha_post + beta_post)
+    sum_b = sum(bayesian_num_scores.values()) or 1.0
+    bayesian_num_norm = {n: (score / sum_b) * 5.0 for n, score in bayesian_num_scores.items()}
+
+    prior_total_sb = m
+    recent_total_sb = recent_w
+    bayesian_sb_scores = {}
+    for sb in range(1, 17):
+        c_h = sb_counts[sb]
+        c_r = recent_sb_counts[sb]
+        alpha_post = c_h + 1 + c_r
+        beta_post = (prior_total_sb - c_h + 1) + (recent_total_sb - c_r)
+        bayesian_sb_scores[sb] = alpha_post / (alpha_post + beta_post)
+    sum_sb = sum(bayesian_sb_scores.values()) or 1.0
+    bayesian_sb_norm = {sb: score / sum_sb for sb, score in bayesian_sb_scores.items()}
+
+    top_bayesian_numbers = [
+        {'number': n, 'score': round(bayesian_num_norm[n], 4), 'count': num_counts[n], 'recent_count': recent_num_counts[n]}
+        for n in sorted(bayesian_num_norm, key=lambda x: -bayesian_num_norm[x])[:10]
+    ]
+    top_bayesian_sb = [
+        {'superbalota': sb, 'score': round(bayesian_sb_norm[sb], 4), 'count': sb_counts[sb], 'recent_count': recent_sb_counts[sb]}
+        for sb in sorted(bayesian_sb_norm, key=lambda x: -bayesian_sb_norm[x])[:5]
+    ]
+
+    sums_sorted = sorted(sums)
+    q25 = sums_sorted[len(sums_sorted) // 4]
+    q75 = sums_sorted[(3 * len(sums_sorted)) // 4]
+    stdev_val = round(statistics.stdev(sums), 2) if len(sums) > 1 else 0.0
+
     return {
         'game': game,
         'draw_count': draw_count,
@@ -474,12 +544,190 @@ def compute_stats(rows: list[dict], game: str = 'baloto', last: int | None = Non
         'cold_numbers': cold,
         'overdue_numbers': overdue,
         'top_pairs': top_pairs,
+        'odd_even': {
+            'distribution': dict(sorted(odd_even_counts.items(), key=lambda kv: -kv[1])),
+            'percentages': {k: round(v / m * 100, 2) for k, v in sorted(odd_even_counts.items(), key=lambda kv: -kv[1])},
+            'most_common': max(odd_even_counts, key=odd_even_counts.get) if odd_even_counts else '3I-2P',
+        },
+        'high_low': {
+            'distribution': dict(sorted(high_low_counts.items(), key=lambda kv: -kv[1])),
+            'percentages': {k: round(v / m * 100, 2) for k, v in sorted(high_low_counts.items(), key=lambda kv: -kv[1])},
+            'most_common': max(high_low_counts, key=high_low_counts.get) if high_low_counts else '3B-2A',
+        },
+        'consecutive_pairs': {
+            'distribution': dict(sorted(consecutive_counts.items())),
+            'percentages': {str(k): round(v / m * 100, 2) for k, v in sorted(consecutive_counts.items())},
+            'at_least_one_pct': round(sum(v for k, v in consecutive_counts.items() if k > 0) / m * 100, 2),
+            'none_pct': round(consecutive_counts[0] / m * 100, 2) if consecutive_counts else 0.0,
+        },
+        'bayesian': {
+            'recent_window': recent_w,
+            'top_numbers': top_bayesian_numbers,
+            'top_superbalotas': top_bayesian_sb,
+            'all_number_scores': {n: round(bayesian_num_norm[n], 4) for n in range(1, 44)},
+            'all_sb_scores': {sb: round(bayesian_sb_norm[sb], 4) for sb in range(1, 17)},
+        },
         'sum_stats': {
             'min': min(sums),
             'max': max(sums),
             'mean': round(statistics.mean(sums), 2),
             'median': round(statistics.median(sums), 2),
+            'std': stdev_val,
+            'q25': q25,
+            'q75': q75,
         },
+    }
+
+
+def _weighted_sample_without_replacement(
+    population: list[int],
+    weights: dict[int, float],
+    k: int,
+    rng: random.Random,
+) -> list[int]:
+    pop = list(population)
+    w = [max(weights.get(x, 1.0), 1e-6) for x in pop]
+    chosen = []
+    for _ in range(k):
+        pick = rng.choices(pop, weights=w, k=1)[0]
+        chosen.append(pick)
+        idx = pop.index(pick)
+        pop.pop(idx)
+        w.pop(idx)
+    return sorted(chosen)
+
+
+def generate_suggested_lines(
+    rows: list[dict],
+    count: int = 1,
+    strategy: str = 'bayesian',
+    game: str = 'baloto',
+    combo_label: str | None = None,
+    rng: random.Random | None = None,
+) -> dict:
+    if strategy not in SUGGESTION_STRATEGIES:
+        raise ValueError(
+            f"Estrategia desconocida {strategy!r}. Válidas: {', '.join(sorted(SUGGESTION_STRATEGIES))}."
+        )
+    integer(count, 'Cantidad de sugerencias', 1, 50)
+    st = compute_stats(rows, game=game)
+    r = rng or random.Random()
+
+    num_weights: dict[int, float] = {}
+    sb_weights: dict[int, float] = {}
+
+    if strategy == 'bayesian':
+        all_num_s = st['bayesian']['all_number_scores']
+        for n in range(1, 44):
+            num_weights[n] = max(all_num_s.get(n, 0.1), 0.01)
+        all_sb_s = st['bayesian']['all_sb_scores']
+        for sb in range(1, 17):
+            sb_weights[sb] = max(all_sb_s.get(sb, 0.05), 0.01)
+
+    elif strategy == 'hot':
+        for item in st['numbers']:
+            num_weights[item['number']] = max(0.05, 1.0 + max(item['z_score'], -0.9))
+        for item in st['superbalotas']:
+            sb_weights[item['number']] = max(0.05, 1.0 + max(item['z_score'], -0.9))
+
+    elif strategy == 'cold':
+        for item in st['numbers']:
+            num_weights[item['number']] = max(0.05, 1.0 + (item['draws_since_seen'] / 10.0))
+        for item in st['superbalotas']:
+            sb_weights[item['number']] = max(0.05, 1.0 + (item['draws_since_seen'] / 10.0))
+
+    elif strategy == 'anti_collision':
+        for n in range(1, 44):
+            if n > 31:
+                num_weights[n] = 3.5
+            elif n <= 12:
+                num_weights[n] = 0.5
+            elif n in (7, 11, 13, 21):
+                num_weights[n] = 0.3
+            else:
+                num_weights[n] = 1.0
+        for sb in range(1, 17):
+            sb_weights[sb] = 2.5 if sb > 12 else 0.8
+
+    else:  # balanced
+        for n in range(1, 44):
+            num_weights[n] = 1.0
+        for sb in range(1, 17):
+            sb_weights[sb] = 1.0
+
+    lines: list[dict] = []
+    lines_text: list[str] = []
+    seen_combos = set()
+
+    q25 = st['sum_stats'].get('q25', 90)
+    q75 = st['sum_stats'].get('q75', 130)
+
+    for i in range(1, count + 1):
+        best_pick = None
+        for _ in range(1000):
+            pick = _weighted_sample_without_replacement(list(range(1, 44)), num_weights, 5, r)
+
+            if strategy in ('bayesian', 'balanced', 'anti_collision'):
+                if all(x <= 31 for x in pick):
+                    continue
+
+            if strategy == 'anti_collision':
+                if sum(1 for x in pick if x > 31) < 2:
+                    continue
+                gaps = [pick[j + 1] - pick[j] for j in range(4)]
+                if len(set(gaps)) <= 1:
+                    continue
+
+            if strategy == 'balanced':
+                odds = sum(1 for x in pick if x % 2 != 0)
+                if odds not in (2, 3):
+                    continue
+                lows = sum(1 for x in pick if x <= 22)
+                if lows not in (2, 3):
+                    continue
+                s = sum(pick)
+                if not (q25 <= s <= q75):
+                    continue
+                consec = sum(1 for j in range(4) if pick[j + 1] == pick[j] + 1)
+                if consec > 1:
+                    continue
+
+            key = tuple(pick)
+            if key not in seen_combos:
+                seen_combos.add(key)
+                best_pick = pick
+                break
+
+        if best_pick is None:
+            best_pick = _weighted_sample_without_replacement(list(range(1, 44)), num_weights, 5, r)
+
+        sb_weights_list = [sb_weights.get(x, 1.0) for x in range(1, 17)]
+        sb_pick = r.choices(list(range(1, 17)), weights=sb_weights_list, k=1)[0]
+
+        lbl = combo_label or (f"Sugerencia {i}" if count > 1 else "Sugerencia")
+        entry = {
+            'numbers': best_pick,
+            'extra': sb_pick,
+            'combo': lbl,
+            'sum': sum(best_pick),
+            'odd_even': f"{sum(1 for x in best_pick if x % 2 != 0)}I-{sum(1 for x in best_pick if x % 2 == 0)}P",
+        }
+        lines.append(entry)
+
+        formatted_nums = ' '.join(f'{n:02d}' for n in best_pick)
+        lines_text.append(f'{lbl}: {formatted_nums} | {sb_pick:02d}')
+
+    return {
+        'strategy': strategy,
+        'strategy_description': SUGGESTION_STRATEGIES[strategy],
+        'count': count,
+        'game': game,
+        'lines': lines,
+        'text': '\n'.join(lines_text),
+        'disclaimer': (
+            'Todos los sorteos son eventos independientes con probabilidad uniforme. '
+            'Las sugerencias se basan en modelado estadístico y teoría de juegos anti-colisión sin garantizar premio.'
+        ),
     }
 
 
@@ -1461,6 +1709,18 @@ def make_handler(store: Store, token: str, fetcher=fetch_html):
                     return self.respond(200, compute_stats(rows, game=game, last=last_val))
                 except ValueError as error:
                     return self.respond(400, {'error': str(error)})
+            if path == '/api/suggest':
+                try:
+                    count_raw = query.get('count', ['1'])[0]
+                    count = integer(int(count_raw), 'Cantidad', 1, 50)
+                    strat = query.get('strategy', ['bayesian'])[0]
+                    game = query.get('game', ['baloto'])[0]
+                    combo = query.get('combo', [None])[0]
+                    rows = load_history(store.history_path)
+                    res = generate_suggested_lines(rows, count=count, strategy=strat, game=game, combo_label=combo)
+                    return self.respond(200, res)
+                except ValueError as error:
+                    return self.respond(400, {'error': str(error)})
             if path in ('/', '/estadisticas') or re.fullmatch(r'/seguimiento/[a-f0-9]{32}', path):
                 csp_nonce = secrets.token_hex(16)
                 rendered = (
@@ -1578,6 +1838,12 @@ def main(argv=None) -> None:
                         help='Sincroniza baloto.com, evalúa todos los tiquetes activos y sale (útil para cron).')
     parser.add_argument('--stats', action='store_true',
                         help='Calcula estadísticas sobre el historial oficial y sale.')
+    parser.add_argument('--suggest', type=int, nargs='?', const=1, metavar='N',
+                        help='Genera N combinaciones sugeridas basadas en el historial y sale (por defecto: 1).')
+    parser.add_argument('--strategy', choices=list(SUGGESTION_STRATEGIES), default='bayesian',
+                        help='Estrategia combinatoria o estadística para --suggest (por defecto: bayesian).')
+    parser.add_argument('--combo', type=str,
+                        help='Etiqueta opcional de combo para las líneas generadas por --suggest.')
     parser.add_argument('--game', choices=['baloto', 'revancha', 'both'], default='baloto')
     parser.add_argument('--last', type=int, help='Limita --stats a los últimos N sorteos.')
     parser.add_argument('--json', action='store_true', help='Imprime salida en formato JSON.')
@@ -1586,13 +1852,14 @@ def main(argv=None) -> None:
     one_shot_modes = sum([
         bool(args.sync_history),
         bool(args.stats),
+        bool(args.suggest is not None),
         bool(args.confirm),
         bool(args.check),
     ])
     if one_shot_modes > 1:
-        parser.error('Usa solo un modo por ejecución (--sync-history, --stats, --confirm o --check).')
+        parser.error('Usa solo un modo por ejecución (--sync-history, --stats, --suggest, --confirm o --check).')
     if args.prepare and one_shot_modes > 0:
-        parser.error('No combines --prepare con --sync-history, --stats, --confirm ni --check.')
+        parser.error('No combines --prepare con --sync-history, --stats, --suggest, --confirm ni --check.')
     if args.no_serve and not args.prepare:
         parser.error('--no-serve requiere indicar --prepare.')
     if args.start_draw is not None and not args.confirm:
@@ -1618,12 +1885,32 @@ def main(argv=None) -> None:
                   f"(#{stats['from_sorteo']} a #{stats['to_sorteo']}, hasta {stats['to_fecha']})")
             print(f"Chi² balotas (gl=42): {stats['chi2_numbers']['chi2']} · "
                   f"Chi² Superbalota (gl=15): {stats['chi2_superbalota']['chi2']}")
+            print(f"Suma media: {stats['sum_stats']['mean']} (IQR: {stats['sum_stats']['q25']}–{stats['sum_stats']['q75']}) · "
+                  f"Par/Impar típico: {stats['odd_even']['most_common']} ({stats['odd_even']['percentages'].get(stats['odd_even']['most_common'], 0)}%) · "
+                  f"Con ≥1 consecutivo: {stats['consecutive_pairs']['at_least_one_pct']}%")
             hot = ', '.join(f"{x['number']:02d} ({x['count']})" for x in stats['hot_numbers'][:7])
             cold = ', '.join(f"{x['number']:02d} ({x['count']})" for x in stats['cold_numbers'][:7])
             over = ', '.join(f"{x['number']:02d} ({x['draws_since_seen']}s)" for x in stats['overdue_numbers'][:7])
+            top_bay = ', '.join(f"{x['number']:02d}" for x in stats['bayesian']['top_numbers'][:5])
             print(f'Más frecuentes: {hot}')
             print(f'Menos frecuentes: {cold}')
             print(f'Mayor rezago: {over}')
+            print(f'Top Bayesiano (Beta-Binomial): {top_bay}')
+        return
+
+    if args.suggest is not None:
+        rows = load_history(args.history)
+        res = generate_suggested_lines(
+            rows,
+            count=args.suggest,
+            strategy=args.strategy,
+            game=args.game,
+            combo_label=args.combo,
+        )
+        if args.json:
+            print(json.dumps(res, ensure_ascii=False, indent=2))
+        else:
+            print(res['text'])
         return
 
     if args.confirm:

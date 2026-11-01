@@ -37,6 +37,11 @@ Resuelve siempre la carpeta real de esta skill (p. ej. relativa a este `SKILL.md
   ```sh
   python3 scripts/baloto.py --stats --game baloto
   ```
+- **Generar jugadas sugeridas (Bayesiana, balanceada o anti-colisión):**
+  ```sh
+  python3 scripts/baloto.py --suggest 3 --strategy bayesian
+  python3 scripts/baloto.py --suggest 1 --strategy anti_collision
+  ```
 - **Levantar el tablero web local (`http://127.0.0.1:8765`):**
   ```sh
   python3 scripts/baloto.py --port 8765

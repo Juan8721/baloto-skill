@@ -51,6 +51,10 @@ python3 skills/baloto/scripts/baloto.py --sync-history
 # Consultar frecuencias, rezagos y χ² (baloto, revancha o both)
 python3 skills/baloto/scripts/baloto.py --stats --game baloto
 python3 skills/baloto/scripts/baloto.py --stats --game both --last 60 --json
+
+# Generar combinaciones sugeridas con modelos combinatorios (bayesian, balanced, anti_collision, hot, cold)
+python3 skills/baloto/scripts/baloto.py --suggest 3 --strategy bayesian
+python3 skills/baloto/scripts/baloto.py --suggest 2 --strategy balanced
 ```
 
 ### 3. Preparar boletas para el carrito oficial y confirmar tras la compra

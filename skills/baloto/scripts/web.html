@@ -83,6 +83,10 @@ th:first-child,td:first-child{padding-left:0}
 .confirm-box{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;background:#f4f6f2;border:1px solid var(--line);padding:6px 10px;border-radius:10px}
 .confirm-box label{margin:0;font-size:12.5px}
 .confirm-box input{width:104px;padding:6px 8px}
+.dist-bar{background:#eef1ec;border-radius:6px;height:7px;overflow:hidden;margin:4px 0 9px}
+.dist-fill{background:var(--accent);height:100%}
+.dist-row{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;margin-bottom:1px}
+.badge-score{font-family:var(--mono);font-size:11.5px;padding:2px 7px;border-radius:4px;background:#eef1ec;color:var(--muted)}
 .list{list-style:none;padding:0;margin:0}
 .list li{padding:12px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
 .list li:last-child{border:0}
@@ -308,7 +312,17 @@ async function viewHome(seq,draft=null){
         <div class="field">
           <div class="label-row">
             <label for="lines">Combinaciones (5 números del 1–43 | Superbalota 1–16)</label>
-            <button type="button" id="btn-fill-sample" class="secondary smallbtn">Insertar ejemplo</button>
+            <div style="display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap">
+              <button type="button" id="btn-suggest-line" class="secondary smallbtn" title="Generar combinación sugerida con modelos estadísticos">✨ Sugerir jugada</button>
+              <select id="suggest-strat" class="smallbtn" style="width:auto;padding:5px 8px;font-size:12px;height:31px" title="Estrategia combinatoria">
+                <option value="bayesian">Bayesiana (Beta-Binomial)</option>
+                <option value="balanced">Balanceada (Par/Impar y Suma)</option>
+                <option value="anti_collision">Anti-colisión (Números altos)</option>
+                <option value="hot">Más frecuentes</option>
+                <option value="cold">Mayor rezago</option>
+              </select>
+              <button type="button" id="btn-fill-sample" class="secondary smallbtn">Insertar ejemplo</button>
+            </div>
           </div>
           <textarea id="lines" name="lines" required spellcheck="false" aria-describedby="lines-help lines-validation" placeholder="Combo A: 04 15 23 34 41 | 12&#10;Combo A: 07 11 19 28 42 | 08">${esc(initLines)}</textarea>
           <div id="lines-validation" class="field-warn" hidden></div>
@@ -363,6 +377,22 @@ async function viewHome(seq,draft=null){
     linesEl.focus();
     updatePreview();
   };
+  const suggestBtn=document.querySelector('#btn-suggest-line'),stratEl=document.querySelector('#suggest-strat');
+  if(suggestBtn){
+    suggestBtn.onclick=async()=>{
+      suggestBtn.disabled=true;
+      try{
+        const st=stratEl?stratEl.value:'bayesian';
+        const res=await api(`/api/suggest?count=1&strategy=${encodeURIComponent(st)}`);
+        if(!linesEl.value.trim())linesEl.value=res.text;
+        else linesEl.value=linesEl.value.replace(/\s*$/,'\n')+res.text;
+        linesEl.focus();
+        updatePreview();
+        const stratName=stratEl?.options[stratEl.selectedIndex]?.text||st;
+        notify(`Sugerencia generada con estrategia ${stratName}.`,'ok');
+      }catch(e){notify(e.message);}finally{suggestBtn.disabled=false;}
+    };
+  }
   [priceEl,drawsEl,linesEl].forEach(el=>el.addEventListener('input',updatePreview));
   updatePreview();
 
@@ -559,12 +589,76 @@ async function viewTicket(id,seq){
 }
 
 function renderStatsBody(st,recent){
+  const oddPcts=st.odd_even?.percentages||{};
+  const hlPcts=st.high_low?.percentages||{};
+  const consec=st.consecutive_pairs||{};
+  const bay=st.bayesian||{top_numbers:[],top_superbalotas:[]};
+  const sumS=st.sum_stats||{min:0,max:0,mean:0,median:0,q25:0,q75:0};
+
   return `
   <div class="cards">
     <div class="metric"><span>Sorteos analizados</span><strong>${st.draw_count}</strong><div class="help">#${st.from_sorteo} → #${st.to_sorteo}</div></div>
     <div class="metric"><span>χ² balotas (gl=42)</span><strong>${dec(st.chi2_numbers.chi2,2)}</strong><div class="help">Umbral p=0,05: 58,12</div></div>
-    <div class="metric"><span>χ² Superbalota (gl=15)</span><strong>${dec(st.chi2_superbalota.chi2,2)}</strong><div class="help">Umbral p=0,05: 25,00</div></div>
-    <div class="metric"><span>Suma media (5 balotas)</span><strong>${dec(st.sum_stats.mean,1)}</strong><div class="help">Mediana: ${dec(st.sum_stats.median,1)} (${st.sum_stats.min}–${st.sum_stats.max})</div></div>
+    <div class="metric"><span>Suma media (5 balotas)</span><strong>${dec(sumS.mean,1)}</strong><div class="help">IQR: ${sumS.q25}–${sumS.q75} (Mediana: ${dec(sumS.median,1)})</div></div>
+    <div class="metric"><span>Par/Impar típico</span><strong>${st.odd_even?.most_common||'3I-2P'}</strong><div class="help">${oddPcts[st.odd_even?.most_common]||0}% de los sorteos</div></div>
+  </div>
+
+  <section class="panel">
+    <div class="label-row" style="margin-bottom:8px">
+      <h2 style="margin:0">Modelo Bayesiano Beta-Binomial (Ponderación para próximo sorteo)</h2>
+      <span class="pill">Ventana de verosimilitud: ${bay.recent_window||50} sorteos</span>
+    </div>
+    <p class="muted">Actualización bayesiana combinando el prior del historial (${st.draw_count} sorteos) con la verosimilitud reciente (${bay.recent_window||50} sorteos). Las probabilidades están normalizadas a 5.0 balotas por sorteo.</p>
+    <div class="row">
+      <div>
+        <h3>Top 10 Balotas más probables</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px">
+          ${(bay.top_numbers||[]).map(b=>`
+            <div style="border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center">
+              <span class="ball">${pad(b.number)}</span>
+              <div style="text-align:right">
+                <span class="badge-score">P=${dec(b.score,3)}</span>
+                <div class="help" style="margin:0">${b.recent_count} en ${bay.recent_window}s</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div>
+        <h3>Top Superbalotas recomendadas</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px">
+          ${(bay.top_superbalotas||[]).map(sb=>`
+            <div style="border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center">
+              <span class="ball sb"><span aria-hidden="true">★</span>${pad(sb.superbalota)}</span>
+              <div style="text-align:right">
+                <span class="badge-score">P=${dec(sb.score,3)}</span>
+                <div class="help" style="margin:0">${sb.recent_count} en ${bay.recent_window}s</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="help" style="margin-top:12px">Los sorteos son independientes; este modelo pondera tendencias sin garantizar aciertos futuros.</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="row" style="margin-bottom:20px">
+    <section class="panel" style="margin:0">
+      <h2>Distribución Par / Impar</h2>
+      <p class="help" style="margin-top:0">Frecuencia histórica de patrones observados</p>
+      ${Object.entries(oddPcts).slice(0,5).map(([pattern,pct])=>`
+        <div class="dist-row"><span><strong>${esc(pattern)}</strong> (${pattern.startsWith('3')||pattern.startsWith('2')?'Equilibrado':'Asimétrico'})</span><span class="num"><strong>${dec(pct,1)}%</strong></span></div>
+        <div class="dist-bar"><div class="dist-fill" style="width:${pct}%"></div></div>
+      `).join('')}
+    </section>
+    <section class="panel" style="margin:0">
+      <h2>Distribución Alto / Bajo (1–22 vs. 23–43)</h2>
+      <p class="help" style="margin-top:0">Balance entre primera y segunda mitad del tarjetón</p>
+      ${Object.entries(hlPcts).slice(0,5).map(([pattern,pct])=>`
+        <div class="dist-row"><span><strong>${esc(pattern)}</strong> (Bajos: 1–22 · Altos: 23–43)</span><span class="num"><strong>${dec(pct,1)}%</strong></span></div>
+        <div class="dist-bar"><div class="dist-fill" style="width:${pct}%;background:#2463eb"></div></div>
+      `).join('')}
+    </section>
   </div>
 
   <div class="row3" style="margin-bottom:20px">
